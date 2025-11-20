@@ -1,0 +1,18 @@
+* {
+  box-sizing: border-box;
+}
+
+@font-face {
+  font-family: "MemomentKkukkukk";
+  src: url("../fonts/MemomentKkukkukk.otf") format("opentype");
+}
+
+body {
+  margin: 0;
+  font-family: "MemomentKkukkukk", sans-serif;
+}
+
+#root {
+  width: 100vw;
+  height: 100vh;
+}
