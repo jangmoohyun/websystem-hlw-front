@@ -1,6 +1,5 @@
 // src/components/game/GameScreen.jsx
 import { useEffect, useState } from "react";
-import "../../css/GameScreen.css";
 import Heroine from "./Heroine";
 import DialogueBox from "./DialogueBox";
 import ChoiceOverlay from "./ChoiceOverlay";
@@ -24,15 +23,20 @@ const script = [
   { speaker: "나", text: "내 다음 수업은 뭐였더라...?" },
 ];
 
-function App() {
+export default function GameScreen({ onGoHome }) {
   const [lineIndex, setLineIndex] = useState(0);
   const [displayedText, setDisplayedText] = useState("");
   const [isAnimating, setIsAnimating] = useState(true);
 
   const [showChoices, setShowChoices] = useState(false);
-
   const [showCodeOverlay, setShowCodeOverlay] = useState(false);
   const [userCode, setUserCode] = useState("");
+
+  // 히로인 3명 한 화면에 담기는지 체크용
+  const visibleHeroines = lineIndex === 3 ? "three" : "one";
+
+  const currentLine = script[lineIndex];
+  const fullText = currentLine.text;
 
   const problemText = `
 다음 문장을 수행하는 코드를 작성하세요:
@@ -46,10 +50,7 @@ function App() {
 (입력)
 첫째 줄에 큐의 크기 N과 뽑아내려고 하는 수의 개수 M이 주어진다. N은 50보다 작거나 같은 자연수이고, M은 N보다 작거나 같은 자연수이다. 
 둘째 줄에는 지민이가 뽑아내려고 하는 수의 위치가 순서대로 주어진다. 위치는 1보다 크거나 같고, N보다 작거나 같은 자연수이다.
-  `;
-
-  const currentLine = script[lineIndex];
-  const fullText = currentLine.text;
+`;
 
   // 타자 효과
   useEffect(() => {
@@ -71,32 +72,20 @@ function App() {
     setIsAnimating(true);
   };
 
-  //  선택지 + 코드 오버레이 + 일반 진행을 모두 이 함수에서 처리
   const goToNextLine = () => {
-    // 조건 1 : 특정 대사 후 선택지 켜기
-    if (lineIndex === 4 && !showChoices) {
-      setShowChoices(true);
-      return;
-    }
-
-    // 조건 2 : 특정 대사 후 코드 입력창 켜기
     if (lineIndex === 2 && !showCodeOverlay) {
       setShowCodeOverlay(true);
       return;
     }
-
-    // 기본 진행
+    if (lineIndex === 4 && !showChoices) {
+      setShowChoices(true);
+      return;
+    }
     if (lineIndex < script.length - 1) {
       startNewLine(lineIndex + 1);
     } else {
       console.log("대사 끝!");
     }
-  };
-
-  const handleChoice = (choiceIndex) => {
-    console.log("선택한 선택지:", choiceIndex);
-    setShowChoices(false);
-    goToNextLine(); // 선택 후 다음 대사 진행
   };
 
   const handleAdvance = () => {
@@ -121,23 +110,23 @@ function App() {
     }
   };
 
+  const handleChoice = (choiceIndex) => {
+    console.log("선택:", choiceIndex);
+    setShowChoices(false);
+    goToNextLine();
+  };
+
   const handleSubmitCode = () => {
     console.log("제출된 코드:", userCode);
     setShowCodeOverlay(false);
-    goToNextLine(); // 제출 후 다음 대사
+    goToNextLine();
   };
 
-  // 스페이스바 넘기기
+  // 스페이스바로 넘기기 (코드창/textarea일 땐 막지 않기)
   useEffect(() => {
     const onKeyDown = (e) => {
-      if (e.target.tagName === "TEXTAREA") {
-        return; // ❗ return → preventDefault 실행 안 함
-      }
-
-      // 코드 입력창 열려 있으면 스페이스바로 대사 넘기기 막기
-      if (showCodeOverlay) {
-        return;
-      }
+      if (e.target.tagName === "TEXTAREA") return;
+      if (showCodeOverlay) return;
       if (e.code === "Space") {
         e.preventDefault();
         handleAdvance();
@@ -148,15 +137,34 @@ function App() {
   });
 
   return (
-    <div className="game-root">
-      <div className="game-background">
+    <div className="w-full h-full flex items-center justify-center">
+      {/* 안쪽 게임 영역 */}
+      <div
+        className="relative w-full h-full bg-cover bg-center"
+        style={{
+          backgroundImage: "url('background/class.png')",
+        }}
+      >
         <Menu
-          onSave={() => console.log("저장하기 클릭")}
-          onLoad={() => console.log("불러오기 클릭")}
-          onGoHome={() => console.log("홈으로 나가기 클릭")}
+          onSave={() => console.log("저장하기")}
+          onLoad={() => console.log("불러오기")}
+          onGoHome={onGoHome}
         />
 
-        <Heroine />
+        {visibleHeroines === "one" && (
+          <Heroine position="center" img="/heroine/c.png" />
+        )}
+
+        {visibleHeroines === "three" && (
+          <>
+            {/* 왼쪽*/}
+            <Heroine position="left" img="/heroine/java.png" />
+            {/* 가운데 */}
+            <Heroine position="center" img="/heroine/c.png" />
+            {/* 오른쪽*/}
+            <Heroine position="right" img="/heroine/python.png" />
+          </>
+        )}
 
         <DialogueBox
           speaker={currentLine.speaker}
@@ -186,5 +194,3 @@ function App() {
     </div>
   );
 }
-
-export default App;

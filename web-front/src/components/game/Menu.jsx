@@ -1,4 +1,4 @@
-// src/components/game/GameMenu.jsx
+// src/components/game/Menu.jsx
 import { useState } from "react";
 
 export default function Menu({ onSave, onLoad, onGoHome }) {
@@ -8,32 +8,83 @@ export default function Menu({ onSave, onLoad, onGoHome }) {
 
   const handleClickItem = (handler) => {
     handler && handler();
-    setOpen(false); // 메뉴 닫기
+    setOpen(false);
   };
 
   return (
-    <div className={open ? "game-menu open" : "game-menu"}>
+    <div
+      className={`
+        absolute top-[16px] right-[20px] z-30
+        bg-white border border-[#333] rounded-[8px] p-[4px]
+        overflow-visible
+        transition-[width] duration-200
+        ${open ? "w-[180px]" : "w-[44px]"}
+      `}
+    >
       {/* 햄버거 버튼 */}
-      <button type="button" className="hamburger-btn" onClick={toggleMenu}>
-        {/* 간단한 햄버거 아이콘 */}
-        <span />
-        <span />
-        <span />
+      <button
+        type="button"
+        className="
+          w-full h-[36px]
+          flex flex-col justify-center items-start
+          gap-[5px]
+          bg-transparent border-none cursor-pointer
+          pl-[6px]
+        "
+        onClick={toggleMenu}
+      >
+        <span className="w-[22px] h-[2px] rounded-[1px] bg-black" />
+        <span className="w-[22px] h-[2px] rounded-[1px] bg-black" />
+        <span className="w-[22px] h-[2px] rounded-[1px] bg-black" />
       </button>
 
-      {/* 드롭다운 메뉴 */}
       {open && (
-        <div className="menu-dropdown">
-          <button className="menu-item" onClick={() => handleClickItem(onSave)}>
+        <div className="mt-[6px] flex flex-col gap-[4px] w-full">
+          {/* 저장하기 */}
+          <button
+            className="
+              relative w-full
+              px-[12px] pl-[15px] py-[8px]
+              text-left text-[15px]
+              bg-transparent border-none
+              text-[#222] cursor-pointer
+              hover:bg-[rgba(0,0,0,0.07)]
+            "
+            onClick={() => handleClickItem(onSave)}
+          >
+            <span className="absolute left-[3px] top-[4px] bottom-[4px] w-[6px] rounded-[4px] bg-[#ffd400]" />
             저장하기
           </button>
-          <button className="menu-item" onClick={() => handleClickItem(onLoad)}>
+
+          {/* 불러오기 */}
+          <button
+            className="
+              relative w-full
+              px-[12px] pl-[15px] py-[8px]
+              text-left text-[15px]
+              bg-transparent border-none
+              text-[#222] cursor-pointer
+              hover:bg-[rgba(0,0,0,0.07)]
+            "
+            onClick={() => handleClickItem(onLoad)}
+          >
+            <span className="absolute left-[3px] top-[4px] bottom-[4px] w-[6px] rounded-[4px] bg-[#ff2b8c]" />
             불러오기
           </button>
+
+          {/* 홈으로 나가기 */}
           <button
-            className="menu-item"
+            className="
+              relative w-full
+              px-[12px] pl-[15px] py-[8px]
+              text-left text-[15px]
+              bg-transparent border-none
+              text-[#222] cursor-pointer
+              hover:bg-[rgba(0,0,0,0.07)]
+            "
             onClick={() => handleClickItem(onGoHome)}
           >
+            <span className="absolute left-[3px] top-[4px] bottom-[4px] w-[6px] rounded-[4px] bg-[#01bcd4]" />
             홈으로 나가기
           </button>
         </div>
