@@ -8,6 +8,7 @@ export default function HomeScreen({
   onContinue,
   onUserPage,
   onSettings,
+  onLogout,
 }) {
   return (
     <div className="w-screen h-screen flex bg-pink-100 overflow-hidden font-['Pretendard','Noto Sans KR',system-ui]">
@@ -17,6 +18,7 @@ export default function HomeScreen({
         onContinue={onContinue}
         onUserPage={onUserPage}
         onSettings={onSettings}
+        onLogout={onLogout}
       />
 
       {/* 오른쪽 메인 영역 */}
