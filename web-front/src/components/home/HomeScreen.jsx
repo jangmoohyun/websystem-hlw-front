@@ -3,6 +3,8 @@ import React from "react";
 import HomeMenu from "./HomeMenu";
 import HomeMain from "./HomeMain";
 
+import LoadOverlay from "../common/LoadOverlay";
+
 export default function HomeScreen({
   onNewGame,
   onContinue,

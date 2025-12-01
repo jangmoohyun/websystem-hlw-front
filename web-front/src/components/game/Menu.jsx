@@ -1,7 +1,7 @@
 // src/components/game/Menu.jsx
 import { useState } from "react";
 
-export default function Menu({ onSave, onLoad, onGoHome }) {
+export default function Menu({ onSave, onLoad, onGoHome, onSetting }) {
   const [open, setOpen] = useState(false);
 
   const toggleMenu = () => setOpen((prev) => !prev);
@@ -52,7 +52,7 @@ export default function Menu({ onSave, onLoad, onGoHome }) {
             "
             onClick={() => handleClickItem(onSave)}
           >
-            <span className="absolute left-[3px] top-[4px] bottom-[4px] w-[6px] rounded-[4px] bg-[#ffd400]" />
+            <span className="absolute left-[3px] top-[4px] bottom-[4px] w-[6px] rounded-[4px] bg-[#ffd400ff]" />
             저장하기
           </button>
 
@@ -68,8 +68,24 @@ export default function Menu({ onSave, onLoad, onGoHome }) {
             "
             onClick={() => handleClickItem(onLoad)}
           >
-            <span className="absolute left-[3px] top-[4px] bottom-[4px] w-[6px] rounded-[4px] bg-[#ff2b8c]" />
+            <span className="absolute left-[3px] top-[4px] bottom-[4px] w-[6px] rounded-[4px] bg-[#ff2b8cff]" />
             불러오기
+          </button>
+
+          {/* 설정 열기 */}
+          <button
+            className="
+              relative w-full
+              px-[12px] pl-[15px] py-[8px]
+              text-left text-[15px]
+              bg-transparent border-none
+              text-[#222] cursor-pointer
+              hover:bg-[rgba(0,0,0,0.07)]
+            "
+            onClick={() => handleClickItem(onSetting)}
+          >
+            <span className="absolute left-[3px] top-[4px] bottom-[4px] w-[6px] rounded-[4px] bg-[#8a2be2ff]" />
+            설정
           </button>
 
           {/* 홈으로 나가기 */}
@@ -84,7 +100,7 @@ export default function Menu({ onSave, onLoad, onGoHome }) {
             "
             onClick={() => handleClickItem(onGoHome)}
           >
-            <span className="absolute left-[3px] top-[4px] bottom-[4px] w-[6px] rounded-[4px] bg-[#01bcd4]" />
+            <span className="absolute left-[3px] top-[4px] bottom-[4px] w-[6px] rounded-[4px] bg-[#01bcd4ff]" />
             홈으로 나가기
           </button>
         </div>

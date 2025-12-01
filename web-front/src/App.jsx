@@ -2,7 +2,6 @@
 import { useState } from "react";
 import "./App.css";
 // import LoginScreen from "./components/LoginScreen";
-// import HomeScreen from "./components/HomeScreen";
 import GameScreen from "./components/game/GameScreen";
 import HomeScreen from "./components/home/HomeScreen";
 

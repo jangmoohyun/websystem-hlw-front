@@ -1,14 +1,32 @@
-// src/components/game/CodeOverlay.jsx
-import { useState } from "react";
+import React, { useState } from "react";
 
 export default function CodeOverlay({
+  title,
   problem,
+  testcases = [],
   code,
   onCodeChange,
   onSubmit,
   onClose,
 }) {
   const [view, setView] = useState("problem");
+
+  // Merge testcases into the problem body for inline display
+  const combinedProblem = (() => {
+    const base = problem ?? "";
+    if (!testcases || testcases.length === 0) return base;
+    const casesText = testcases
+      .map((tc, idx) => {
+        const inText = tc.input ?? tc.content ?? "";
+        const outText = tc.expected ?? "";
+        if (inText && outText)
+          return `${idx + 1}. 입력:\n${inText}\n출력:\n${outText}`;
+        if (inText) return `${idx + 1}. ${inText}`;
+        return `${idx + 1}. ${tc.content ?? tc.expected ?? ""}`;
+      })
+      .join("\n\n");
+    return `${base}\n\n공개 테스트케이스:\n${casesText}`;
+  })();
 
   return (
     <div
@@ -28,7 +46,9 @@ export default function CodeOverlay({
       >
         {view === "problem" ? (
           <>
-            <h2 className="mt-[5px] mb-[8px] text-[28px]">코딩 문제</h2>
+            <h2 className="mt-[5px] mb-[8px] text-[28px]">
+              {title ?? "코딩 문제"}
+            </h2>
             <div
               className="
                 flex-1
@@ -40,8 +60,9 @@ export default function CodeOverlay({
                 whitespace-pre-wrap
               "
             >
-              {problem}
+              {combinedProblem}
             </div>
+
             <div className="flex justify-end gap-[10px] mt-[10px]">
               <button
                 className="
