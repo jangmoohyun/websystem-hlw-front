@@ -1,0 +1,65 @@
+# .github/workflows/frontend.yml 파일 내용
+
+name: Frontend CI/CD to S3 and CloudFront (Mirroring)
+
+on:
+  push:
+    branches:
+      - master # 미러링 대상 브랜치 (master)에 푸시될 때 실행
+
+# GitHub Secrets에서 값을 불러와 환경 변수로 사용합니다.
+env:
+  AWS_REGION: ${{ secrets.AWS_REGION }}
+  S3_BUCKET_NAME: ${{ secrets.S3_BUCKET_NAME }}
+  CLOUDFRONT_ID: ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }}
+  PROJECT_ROOT: web-front # 소스 코드 디렉토리
+  BUILD_DIRECTORY: dist # 💡 최종 빌드 결과물 폴더 (build가 아닌 dist로 가정)
+
+jobs:
+  deploy:
+    name: Build and Deploy to S3/CloudFront
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write # OIDC 인증을 위해 필수
+      contents: read 
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # --- 1단계: Node 환경 설정 및 빌드 ---
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22' # 💡 Node.js 버전을 22로 강제 지정 (Vite 오류 해결)
+          cache: 'npm'
+          cache-dependency-path: ${{ env.PROJECT_ROOT }}/package-lock.json 
+      
+      - name: Install dependencies and build
+        run: |
+          cd ${{ env.PROJECT_ROOT }} # web-front 디렉토리로 이동
+          npm install
+          npm run build
+          
+      # --- 2단계: AWS 인증 (OIDC를 통해 IAM Role 권한 획득) ---
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_IAM_ROLE_ARN_FRONTEND }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      # --- 3단계: S3 업로드 (배포) - Docker 이미지 직접 호출 ---
+      - name: Upload static files to S3
+        # 💡 aws-cli 액션 대신 Docker 이미지를 직접 호출하여 액션 접근 오류 해결
+        uses: docker://amazon/aws-cli:2.15.20 
+        with:
+          # S3 동기화 명령어
+          args: s3 sync ${{ env.PROJECT_ROOT }}/${{ env.BUILD_DIRECTORY }}/ s3://${{ env.S3_BUCKET_NAME }}/ --delete 
+          
+      # --- 4단계: CloudFront 캐시 무효화 (Invalidation) - Docker 이미지 직접 호출 ---
+      - name: CloudFront Invalidation (캐시 갱신)
+        # 💡 aws-cli 액션 대신 Docker 이미지를 직접 호출
+        uses: docker://amazon/aws-cli:2.15.20 
+        with:
+          # CloudFront 캐시 무효화 명령어
+          args: cloudfront create-invalidation --distribution-id ${{ env.CLOUDFRONT_ID }} --paths "/*"
