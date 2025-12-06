@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { resolveTargetToPos } from "../utils/targetResolver";
+import { chooseLanguageId } from "../utils/heroineLanguage";
 
 export default function useProblemHandler({
   currentNode,
@@ -15,13 +16,13 @@ export default function useProblemHandler({
   setPos,
   setShowLoadOverlay,
 }) {
-  const [showCodeOverlay, setShowCodeOverlay] = useState(false);
-  const [problemData, setProblemData] = useState(null);
-  const [userCode, setUserCode] = useState("");
+  const [showCodeOverlay, setShowCodeOverlay] = useState(false); // 코드 문제창 활성화여부
+  const [problemData, setProblemData] = useState(null); // 현재 문제 데이터
+  const [userCode, setUserCode] = useState(""); // 사용자가 작성한 코드
 
-  const [canAdvance, setCanAdvance] = useState(true);
+  const [canAdvance, setCanAdvance] = useState(true); // 문제 풀이 후 진행 가능 여부
   const [requiredProblemNodeIndex, setRequiredProblemNodeIndex] =
-    useState(null);
+    useState(null); // 문제 노드 인덱스(진행 강제)
 
   // problem 노드 입장/퇴장 처리
   useEffect(() => {
@@ -76,28 +77,12 @@ export default function useProblemHandler({
 
       setShowLoadOverlay(true);
       try {
-        // 히로인 기반 언어 선택
-        let chosenHeroineName = null;
-        if (
-          currentNode?.speaker &&
-          storyHeroines.some((h) => h.name === currentNode.speaker)
-        ) {
-          chosenHeroineName = currentNode.speaker;
-        } else if (storyHeroines && storyHeroines.length > 0) {
-          chosenHeroineName = storyHeroines[0].name;
-        }
-
-        const HEROINE_LANGUAGE_MAP = {
-          이시현: 50,
-          파인선: 71,
-          유자빈: 91,
-        };
-
-        const mappedLangId = chosenHeroineName
-          ? HEROINE_LANGUAGE_MAP[chosenHeroineName] ??
-            HEROINE_LANGUAGE_MAP["파인선"]
-          : HEROINE_LANGUAGE_MAP["파인선"];
-
+        // 히로인 기반 언어 선택 (override가 있으면 그걸 우선)
+        // 기본 매핑 로직은 utils/heroineLanguage.js로 위임
+        const mappedLangId = chooseLanguageId(
+          currentNode?.speaker,
+          storyHeroines
+        );
         const finalLangId = override.languageId ?? mappedLangId;
 
         // 줄바꿈 정규화

@@ -12,6 +12,7 @@ import useTyping from "./hooks/useTyping";
 import useChoiceHandler from "./hooks/useChoiceHandler";
 import useProblemHandler from "./hooks/useProblemHandler";
 import { computeVisibleHeroines } from "./utils/helpers";
+import { chooseLanguageId } from "./utils/heroineLanguage";
 
 //상수 정의 -----------------------------------------------------------------
 
@@ -90,26 +91,10 @@ export default function GameScreen({ onGoHome, onSetting }) {
   );
 
   // 코드 제출용 언어 ID (시현 = C, 파인선 = Python, 유자빈 = Java)
-  const overlayDefaultLangId = useMemo(() => {
-    let chosenHeroine =
-      (activeSpeaker && storyHeroines.find((h) => h.name === activeSpeaker)) ||
-      storyHeroines[0];
-
-    if (!chosenHeroine) return 71; // 기본 Python - 사용할 일 없음
-
-    const langField = (chosenHeroine.language || "")
-      .toString()
-      .toLowerCase()
-      .trim();
-
-    if (langField) {
-      if (langField.includes("python")) return 71;
-      if (langField.includes("java")) return 91;
-      if (langField === "c" || langField.includes("c")) return 50;
-    }
-
-    return HEROINE_LANGUAGE_MAP[chosenHeroine.name] ?? 71;
-  }, [activeSpeaker, storyHeroines]);
+  const overlayDefaultLangId = useMemo(
+    () => chooseLanguageId(activeSpeaker, storyHeroines),
+    [activeSpeaker, storyHeroines]
+  );
 
   // 훅으로 분리한 선택/문제 처리는 goToNextSequential 선언 후에 호출합니다.
 
@@ -218,7 +203,7 @@ export default function GameScreen({ onGoHome, onSetting }) {
     const knownNames =
       Array.isArray(storyHeroines) && storyHeroines.length > 0
         ? storyHeroines.map((h) => h.name)
-        : ["이시현", "유자빈", "파인선"];
+        : FALLBACK_HEROINE_ORDER;
 
     //대사 라인에서 speaker가 누구인지(이를 통해 해당 히로인 이미지 표시)
     if (
@@ -261,12 +246,8 @@ export default function GameScreen({ onGoHome, onSetting }) {
       return;
     }
 
-    // 혹시 다른 이유로 canAdvance가 막혀 있을 때도 대비
-    if (
-      !canAdvance ||
-      (requiredProblemNodeIndex !== null &&
-        Number(pos) === Number(requiredProblemNodeIndex))
-    ) {
+    // 다른 이유로 진행이 막혀 있으면 알림 (문제 노드 여부는 위에서 이미 처리)
+    if (!canAdvance) {
       alert("문제를 제출해야 다음으로 진행할 수 있습니다.");
       return;
     }
@@ -345,7 +326,7 @@ export default function GameScreen({ onGoHome, onSetting }) {
       );
     }
 
-    //17-2 단일 모드
+    // 단일 모드
     let mainHeroName = null;
     if (Array.isArray(storyHeroines) && storyHeroines.length > 0) {
       mainHeroName = storyHeroines[0].name;
@@ -406,9 +387,7 @@ export default function GameScreen({ onGoHome, onSetting }) {
         {showCodeOverlay && (
           <CodeOverlay
             title={problemData?.title}
-            problem={
-              problemData?.content ?? currentNode?.codeProblem?.text ?? ""
-            }
+            problem={problemData?.content ?? ""}
             testcases={problemData?.testcases ?? []}
             code={userCode}
             onCodeChange={setUserCode}
