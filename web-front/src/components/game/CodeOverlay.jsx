@@ -8,10 +8,19 @@ export default function CodeOverlay({
   onCodeChange,
   onSubmit,
   onClose,
+  initialLanguageId,
 }) {
   const [view, setView] = useState("problem");
+  const [languageId, setLanguageId] = useState(initialLanguageId ?? 71);
 
-  // Merge testcases into the problem body for inline display
+  // Keep languageId in sync if parent provides a different default when opening
+  React.useEffect(() => {
+    if (initialLanguageId !== undefined && initialLanguageId !== null) {
+      setLanguageId(initialLanguageId);
+    }
+  }, [initialLanguageId]);
+
+  // 공개 테스트케이스를 문제 본문에 병합하여 인라인으로 표시
   const combinedProblem = (() => {
     const base = problem ?? "";
     if (!testcases || testcases.length === 0) return base;
@@ -31,7 +40,11 @@ export default function CodeOverlay({
   return (
     <div
       className="absolute inset-0 bg-[rgba(0,0,0,0.45)] flex items-center justify-center z-20"
-      onClick={onClose}
+      onClick={(e) => {
+        // 배경(오버레이 외곽) 클릭이 게임 레이어로 전파되어 대사 진행을 x
+        e.stopPropagation();
+        if (typeof onClose === "function") onClose();
+      }}
     >
       <div
         className="
@@ -63,9 +76,11 @@ export default function CodeOverlay({
               {combinedProblem}
             </div>
 
-            <div className="flex justify-end gap-[10px] mt-[10px]">
-              <button
-                className="
+            <div className="flex justify-between items-center gap-[10px] mt-[10px]">
+              <div className="flex items-center gap-2"></div>
+              <div className="flex">
+                <button
+                  className="
                   border-none rounded-[8px]
                   px-[16px] py-[10px]
                   text-[18px] cursor-pointer
@@ -73,12 +88,12 @@ export default function CodeOverlay({
                   transition
                   hover:-translate-y-[1px]
                 "
-                onClick={() => setView("code")}
-              >
-                코드 입력하기
-              </button>
-              <button
-                className="
+                  onClick={() => setView("code")}
+                >
+                  코드 입력하기
+                </button>
+                <button
+                  className="
                   border-none rounded-[8px]
                   px-[16px] py-[10px]
                   text-[18px] cursor-pointer
@@ -86,10 +101,11 @@ export default function CodeOverlay({
                   transition
                   hover:-translate-y-[1px]
                 "
-                onClick={onClose}
-              >
-                닫기
-              </button>
+                  onClick={onClose}
+                >
+                  닫기
+                </button>
+              </div>
             </div>
           </>
         ) : (
@@ -119,7 +135,7 @@ export default function CodeOverlay({
                   transition
                   hover:-translate-y-[1px]
                 "
-                onClick={onSubmit}
+                onClick={() => onSubmit && onSubmit({ code, languageId })}
               >
                 제출하기
               </button>
