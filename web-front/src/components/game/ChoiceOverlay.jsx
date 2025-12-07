@@ -31,7 +31,8 @@ export default function ChoiceOverlay({ choices, onChoice }) {
             "
             onClick={() => onChoice(idx)}
           >
-            {idx + 1}. {label}
+            {/* {idx + 1}. */}
+            {label}
           </button>
         ))}
       </div>
