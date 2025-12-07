@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
 import { resolveTargetToPos } from "../utils/targetResolver";
-import { chooseLanguageId } from "../utils/heroineLanguage";
 
 export default function useProblemHandler({
   currentNode,
@@ -12,8 +11,6 @@ export default function useProblemHandler({
   scriptLines,
   storyHeroines,
   storyId,
-  goToNextSequential,
-  setPos,
   setShowLoadOverlay,
 }) {
   const [showCodeOverlay, setShowCodeOverlay] = useState(false); // 코드 문제창 활성화여부
@@ -23,6 +20,8 @@ export default function useProblemHandler({
   const [canAdvance, setCanAdvance] = useState(true); // 문제 풀이 후 진행 가능 여부
   const [requiredProblemNodeIndex, setRequiredProblemNodeIndex] =
     useState(null); // 문제 노드 인덱스(진행 강제)
+  const [resultData, setResultData] = useState(null); // 채점 결과 데이터
+  const [pendingNextPos, setPendingNextPos] = useState(null); // 제출 후 적용할 다음 위치
 
   // problem 노드 입장/퇴장 처리
   useEffect(() => {
@@ -78,12 +77,25 @@ export default function useProblemHandler({
       setShowLoadOverlay(true);
       try {
         // 히로인 기반 언어 선택 (override가 있으면 그걸 우선)
-        // 기본 매핑 로직은 utils/heroineLanguage.js로 위임
-        const mappedLangId = chooseLanguageId(
-          currentNode?.speaker,
-          storyHeroines
-        );
-        const finalLangId = override.languageId ?? mappedLangId;
+        // 백엔드에서 제공하는 heroine.languageId 필드를 우선 사용
+        let mappedLangId = null;
+        if (currentNode?.speaker && Array.isArray(storyHeroines)) {
+          const found = storyHeroines.find(
+            (h) => h.name === currentNode.speaker
+          );
+          if (found && typeof found.languageId === "number")
+            mappedLangId = found.languageId;
+        }
+        if (
+          !mappedLangId &&
+          Array.isArray(storyHeroines) &&
+          storyHeroines.length > 0
+        ) {
+          const first = storyHeroines[0];
+          if (first && typeof first.languageId === "number")
+            mappedLangId = first.languageId;
+        }
+        const finalLangId = override.languageId ?? mappedLangId ?? 71;
 
         // 줄바꿈 정규화
         const normalizedSource = (override.code ?? userCode ?? "").replace(
@@ -100,6 +112,8 @@ export default function useProblemHandler({
           languageId: finalLangId,
         };
 
+        // 제출 API 호출
+        console.debug("[useProblemHandler] submitting payload", payload);
         const res = await fetch(`/problems/${storyId}/submit-code`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -110,32 +124,43 @@ export default function useProblemHandler({
         if (!json.success) throw new Error(json.error || "submission failed");
 
         const { passed, testResults, appliedAffinities } = json;
-        const okCount = (testResults || []).filter((t) => t.ok).length;
-        const total = (testResults || []).length;
-
-        const title = passed ? "채점 통과" : "채점 실패";
-        let msg = `${title}: ${okCount}/${total} 테스트 통과`;
-
-        if (appliedAffinities && appliedAffinities.length > 0) {
-          msg += "\n\n적용된 호감도 변화:\n";
-          msg += appliedAffinities
-            .map((a) => `${a.heroine}: ${a.delta} (now ${a.likeValue})`)
-            .join("\n");
-        }
-
-        alert(msg);
+        setResultData({
+          passed,
+          testResults: testResults || [],
+          appliedAffinities: appliedAffinities || [],
+        });
 
         // 제출 성공 후 진행 허용 + 강제 index 해제
         setRequiredProblemNodeIndex(null);
         setCanAdvance(true);
 
-        const target =
+        let target =
           currentNode?.codeProblem?.onSubmitTargetIndex ??
-          currentNode?.codeProblem?.targetIndex;
+          currentNode?.codeProblem?.targetIndex ??
+          null;
+
+        // 조건부 대사 결정 (통과/실패에 따른 분기)
+        if (target == null) {
+          try {
+            const conditionKey = passed ? "pass" : "fail";
+            const nodes = Array.isArray(scriptLines) ? scriptLines : [];
+            const condNode = nodes.find(
+              (n) =>
+                Number(n.index) > Number(currentNode.index) &&
+                n.meta &&
+                n.meta.condition === conditionKey
+            );
+            if (condNode) target = condNode.index;
+            // eslint-disable-next-line no-unused-vars
+          } catch (e) {
+            // ignore and fallback to sequential
+            target = null;
+          }
+        }
 
         const p = resolveTargetToPos(indexMapRef, scriptLines, target);
-        if (p !== null) setPos(p);
-        else goToNextSequential();
+        if (p !== null) setPendingNextPos(p);
+        else setPendingNextPos("sequential");
 
         setShowCodeOverlay(false);
       } catch (e) {
@@ -146,12 +171,10 @@ export default function useProblemHandler({
     },
     [
       currentNode,
-      goToNextSequential,
       indexMapRef,
       pos,
       problemData?.id,
       scriptLines,
-      setPos,
       setShowLoadOverlay,
       storyHeroines,
       storyId,
@@ -171,5 +194,9 @@ export default function useProblemHandler({
     requiredProblemNodeIndex,
     setRequiredProblemNodeIndex,
     setShowLoadOverlay,
+    resultData,
+    setResultData,
+    pendingNextPos,
+    setPendingNextPos,
   };
 }

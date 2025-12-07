@@ -4,7 +4,10 @@ import Heroine from "./Heroine";
 import DialogueBox from "./DialogueBox";
 import CodeOverlay from "./CodeOverlay";
 import Menu from "./Menu";
+import SaveMenu from "../common/SaveMenu";
 import LoadOverlay from "../common/LoadOverlay";
+import SubmittingOverlay from "../codeProblem/SubmittingOverlay";
+import ResultOverlay from "../codeProblem/ResultOverlay";
 import ChoiceOverlay from "./ChoiceOverlay";
 
 import useStoryLoader from "./hooks/useStoryLoader";
@@ -12,16 +15,8 @@ import useTyping from "./hooks/useTyping";
 import useChoiceHandler from "./hooks/useChoiceHandler";
 import useProblemHandler from "./hooks/useProblemHandler";
 import { computeVisibleHeroines } from "./utils/helpers";
-import { chooseLanguageId } from "./utils/heroineLanguage";
 
 //상수 정의 -----------------------------------------------------------------
-
-//히로인 별 코드언어 ID 매핑
-const HEROINE_LANGUAGE_MAP = {
-  이시현: 50, // C
-  파인선: 71, // Python
-  유자빈: 91, // Java
-};
 
 //히로인 별 이미지 매핑  - 나중에 DB로 빼야함.
 const HEROINE_IMAGE_MAP = {
@@ -64,6 +59,7 @@ export default function GameScreen({ onGoHome, onSetting }) {
   //CodeOverlay 닫은 직후 클릭 한 번 억제용
   const [suppressAdvance, setSuppressAdvance] = useState(false);
   const [showLoadOverlay, setShowLoadOverlay] = useState(false); // 로딩창 오버레이 (훅에 전달)
+  const [showSaveMenu, setShowSaveMenu] = useState(false);
 
   // 스토리 메타 데이터(히로인/문제) & 히로인 등장 여부 ----------------------
   const [storyHeroines, setStoryHeroines] = useState([]);
@@ -91,12 +87,23 @@ export default function GameScreen({ onGoHome, onSetting }) {
   );
 
   // 코드 제출용 언어 ID (시현 = C, 파인선 = Python, 유자빈 = Java)
-  const overlayDefaultLangId = useMemo(
-    () => chooseLanguageId(activeSpeaker, storyHeroines),
-    [activeSpeaker, storyHeroines]
-  );
+  const overlayDefaultLangId = useMemo(() => {
+    // Prefer normalized languageId from backend if present
+    if (activeSpeaker && Array.isArray(storyHeroines)) {
+      const found = storyHeroines.find((h) => h.name === activeSpeaker);
+      if (found && typeof found.languageId === "number")
+        return found.languageId;
+    }
+    if (Array.isArray(storyHeroines) && storyHeroines.length > 0) {
+      const first = storyHeroines[0];
+      if (first && typeof first.languageId === "number")
+        return first.languageId;
+    }
+    // Fallback to Python
+    return 71;
+  }, [activeSpeaker, storyHeroines]);
 
-  // 훅으로 분리한 선택/문제 처리는 goToNextSequential 선언 후에 호출합니다.
+  // 훅으로 분리한 선택/문제 처리는 goToNextSequential 선언 후에 호출.
 
   // 대사 라인 이동 -------------------------------------------
   // 순차 진행 : 다음 라인으로 이동
@@ -116,6 +123,10 @@ export default function GameScreen({ onGoHome, onSetting }) {
     canAdvance,
     setCanAdvance,
     requiredProblemNodeIndex,
+    resultData,
+    setResultData,
+    pendingNextPos,
+    setPendingNextPos,
   } = useProblemHandler({
     currentNode,
     pos,
@@ -130,6 +141,9 @@ export default function GameScreen({ onGoHome, onSetting }) {
     setPos,
     setShowLoadOverlay,
   });
+
+  // pendingNextPos is set by the problem handler after submission to defer navigation
+  // until the user has seen/closed the result overlay.
 
   const { showChoices, setShowChoices, choiceLabels, handleChoice } =
     useChoiceHandler({
@@ -222,6 +236,11 @@ export default function GameScreen({ onGoHome, onSetting }) {
   const handleAdvance = useCallback(() => {
     if (!currentNode) return;
 
+    // If a result overlay is present, block advancement until user closes it
+    if (resultData) {
+      return;
+    }
+
     // CodeOverlay 닫은 직후 클릭 1회 무시(버그 방지용 다음 대사로 넘어가는거 막기)
     if (suppressAdvance) {
       setSuppressAdvance(false);
@@ -281,6 +300,7 @@ export default function GameScreen({ onGoHome, onSetting }) {
     setShowCodeOverlay,
     setSuppressAdvance,
     setShowChoices,
+    resultData,
   ]);
 
   //세이브 슬롯 로드 -----------------------------------------------
@@ -352,10 +372,8 @@ export default function GameScreen({ onGoHome, onSetting }) {
       >
         {/* 메뉴 */}
         <Menu
-          onSave={() => {
-            // TODO: 세이브 기능 구현
-          }}
-          onLoad={() => setShowLoadOverlay(true)}
+          onSave={() => setShowSaveMenu(true)}
+          onLoad={() => setShowSaveMenu(true)}
           onGoHome={onGoHome}
           onSetting={onSetting}
         />
@@ -401,12 +419,56 @@ export default function GameScreen({ onGoHome, onSetting }) {
           />
         )}
 
-        {/* 로드 오버레이 */}
-        {showLoadOverlay && (
+        {/* 로드 오버레이 (세이브/로드) 또는 제출 중 전용 오버레이 */}
+        {showLoadOverlay && problemData ? (
+          <SubmittingOverlay />
+        ) : showLoadOverlay ? (
           <LoadOverlay
             slots={[]}
             onSelect={handleLoadSlot}
             onClose={() => setShowLoadOverlay(false)}
+          />
+        ) : null}
+
+        {/* 슬롯 기반 저장/불러오기 메뉴 모달 */}
+        {showSaveMenu && (
+          <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/40">
+            <div className="bg-white p-4 rounded">
+              <button className="mb-2" onClick={() => setShowSaveMenu(false)}>
+                닫기
+              </button>
+              <SaveMenu
+                storyId={storyId}
+                lineIndex={pos}
+                heroineLikes={[]}
+                onLoad={(saveData) => {
+                  // SaveMenu에서 불러오기를 하면 게임 상태에 반영
+                  if (saveData && typeof saveData.lineIndex === "number") {
+                    setPos(saveData.lineIndex);
+                  }
+                  setShowSaveMenu(false);
+                }}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* 제출 결과 오버레이 */}
+        {resultData && (
+          <ResultOverlay
+            result={resultData}
+            onClose={() => {
+              // Apply deferred navigation that was recorded by the submit handler
+              if (pendingNextPos !== null) {
+                if (pendingNextPos === "sequential") {
+                  goToNextSequential();
+                } else {
+                  setPos(pendingNextPos);
+                }
+                setPendingNextPos(null);
+              }
+              setResultData(null);
+            }}
           />
         )}
       </div>

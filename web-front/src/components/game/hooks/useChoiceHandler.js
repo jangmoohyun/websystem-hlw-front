@@ -47,7 +47,6 @@ export default function useChoiceHandler({
 
       if (needsServer) {
         (async () => {
-          setShowLoadOverlay(true);
           try {
             const res = await fetch("/choices/select", {
               method: "POST",
@@ -96,8 +95,6 @@ export default function useChoiceHandler({
             }
           } catch {
             goToNextSequential(); // 다음 대사로
-          } finally {
-            setShowLoadOverlay(false); // 선택지 창 닫기
           }
         })();
         return;
