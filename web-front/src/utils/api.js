@@ -1,5 +1,5 @@
 // src/utils/api.js
-const backendUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:3000";
+const backendUrl = import.meta.env.VITE_BACKEND_URL || "https://hlw-back-dev-alb-1292379324.ap-northeast-2.elb.amazonaws.com";
 
 // 토큰 저장/조회
 export const getAccessToken = () => {
