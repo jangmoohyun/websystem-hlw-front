@@ -76,8 +76,6 @@ export default function useProblemHandler({
 
       setShowLoadOverlay(true);
       try {
-        // 히로인 기반 언어 선택 (override가 있으면 그걸 우선)
-        // 백엔드에서 제공하는 heroine.languageId 필드를 우선 사용
         let mappedLangId = null;
         if (currentNode?.speaker && Array.isArray(storyHeroines)) {
           const found = storyHeroines.find(

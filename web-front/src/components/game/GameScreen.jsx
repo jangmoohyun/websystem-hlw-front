@@ -1,5 +1,11 @@
 // src/components/game/GameScreen.jsx
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import Heroine from "./Heroine";
 import DialogueBox from "./DialogueBox";
 import CodeOverlay from "./CodeOverlay";
@@ -16,8 +22,6 @@ import useChoiceHandler from "./hooks/useChoiceHandler";
 import useProblemHandler from "./hooks/useProblemHandler";
 import { computeVisibleHeroines } from "./utils/helpers";
 
-//상수 정의 -----------------------------------------------------------------
-
 //히로인 별 이미지 매핑  - 나중에 DB로 빼야함.
 const HEROINE_IMAGE_MAP = {
   이시현: "/heroine/c.png",
@@ -32,7 +36,7 @@ const FALLBACK_HEROINE_ORDER = ["이시현", "유자빈", "파인선"];
 
 export default function GameScreen({ onGoHome, onSetting }) {
   // 현재 플레이 중인 스토리 ID
-  const [storyId, setStoryId] = useState(1); //시작은 1
+  const [storyId, setStoryId] = useState(3); //시작은 1
 
   // 스토리/스크립트 로딩
   const {
@@ -65,6 +69,10 @@ export default function GameScreen({ onGoHome, onSetting }) {
   const [storyHeroines, setStoryHeroines] = useState([]);
   const [storyProblems, setStoryProblems] = useState([]);
   const [hasHeroineAppeared, setHasHeroineAppeared] = useState(false);
+  // 일러스트 모드 상태: 스크립트 노드(type : illust)일 때
+  const [illustrationActive, setIllustrationActive] = useState(false);
+  const [illustrationImage, setIllustrationImage] = useState(null);
+  const illustrationTimerRef = useRef(null);
 
   // 대사 타이핑 효과 --------------------------------------------------------
   const { displayed, isAnimating, setDisplayed, setIsAnimating } = useTyping(
@@ -142,9 +150,6 @@ export default function GameScreen({ onGoHome, onSetting }) {
     setShowLoadOverlay,
   });
 
-  // pendingNextPos is set by the problem handler after submission to defer navigation
-  // until the user has seen/closed the result overlay.
-
   const { showChoices, setShowChoices, choiceLabels, handleChoice } =
     useChoiceHandler({
       currentNode,
@@ -212,6 +217,49 @@ export default function GameScreen({ onGoHome, onSetting }) {
 
   useEffect(() => {
     if (!currentNode) return;
+    // 일러스트 노드 처리: type이 'illust'인 경우
+    const nodeType = (currentNode.type || "").toString().toLowerCase();
+    const isIllustration = nodeType === "illust";
+
+    if (isIllustration) {
+      // 이미지 경로와 지속시간 설정
+      const rawMeta = currentNode.meta;
+      const meta = Array.isArray(rawMeta) ? rawMeta[0] : rawMeta || {};
+
+      const img = meta.image || null;
+      const durRaw = meta.duration || 0;
+      const durationSec = Number(durRaw);
+      // duration이 0 또는 없는 경우 기본 대기시간을 사용(초)
+      const effectiveDuration =
+        Number.isFinite(durationSec) && durationSec > 0 ? durationSec : 3;
+      console.log(img);
+      // 기존 타이머 정리
+      if (illustrationTimerRef.current) {
+        clearTimeout(illustrationTimerRef.current);
+        illustrationTimerRef.current = null;
+      }
+
+      setIllustrationImage(img ?? null);
+      setIllustrationActive(true);
+
+      // 항상 타이머를 설정해서 일정 시간 동안 유지하도록 함
+      illustrationTimerRef.current = setTimeout(() => {
+        // 일러스트 시간이 끝나면 자동으로 다음 장면으로 이동
+        try {
+          goToNextSequential();
+          // eslint-disable-next-line no-unused-vars
+        } catch (e) {
+          /* empty */
+        }
+        setIllustrationActive(false);
+        setIllustrationImage(null);
+        illustrationTimerRef.current = null;
+      }, effectiveDuration * 1000);
+
+      // 일러스트 모드에서는 히로인 등장은 숨김
+      setHasHeroineAppeared(false);
+      return; // 일러스트 노드의 경우 아래 기존 로직을 무시
+    }
 
     // storyHeroines를 통해 해당 스토리에 연결된 히로인 이름 목록 생성
     const knownNames =
@@ -235,8 +283,8 @@ export default function GameScreen({ onGoHome, onSetting }) {
 
   const handleAdvance = useCallback(() => {
     if (!currentNode) return;
-
-    // If a result overlay is present, block advancement until user closes it
+    // 일러스트 활성 시에는 진행을 막음 (일정 시간 지난 후 자동 해제)
+    if (illustrationActive) return;
     if (resultData) {
       return;
     }
@@ -301,7 +349,18 @@ export default function GameScreen({ onGoHome, onSetting }) {
     setSuppressAdvance,
     setShowChoices,
     resultData,
+    illustrationActive,
   ]);
+
+  // 컴포넌트 언마운트 시 일러스트 타이머 정리
+  useEffect(() => {
+    return () => {
+      if (illustrationTimerRef.current) {
+        clearTimeout(illustrationTimerRef.current);
+        illustrationTimerRef.current = null;
+      }
+    };
+  }, []);
 
   //세이브 슬롯 로드 -----------------------------------------------
 
@@ -314,6 +373,8 @@ export default function GameScreen({ onGoHome, onSetting }) {
   //히로인 렌더링 -----------------------------------------------
 
   const renderHeroines = () => {
+    // 일러스트가 활성화되어 있으면 히로인 그림은 숨깁니다.
+    if (illustrationActive) return null;
     if (!hasHeroineAppeared) return null;
 
     //3인 모드
@@ -363,12 +424,29 @@ export default function GameScreen({ onGoHome, onSetting }) {
   };
 
   //렌더 --------------------------------------------------------------------
+  const backgroundStyle = (() => {
+    if (illustrationActive && illustrationImage) {
+      return {
+        backgroundImage: `url('${illustrationImage}')`,
+        backgroundSize: "contain",
+        backgroundRepeat: "no-repeat",
+        backgroundPosition: "center",
+        backgroundColor: "#000",
+      };
+    }
+
+    return {
+      backgroundImage: "url('background/class.png')",
+      backgroundSize: "cover",
+      backgroundPosition: "center",
+    };
+  })();
 
   return (
     <div className="w-full h-full flex items-center justify-center">
       <div
         className="relative w-full h-full bg-cover bg-center"
-        style={{ backgroundImage: "url('background/class.png')" }}
+        style={backgroundStyle}
       >
         {/* 메뉴 */}
         <Menu
@@ -378,7 +456,7 @@ export default function GameScreen({ onGoHome, onSetting }) {
           onSetting={onSetting}
         />
 
-        {/* 히로인 */}
+        {/* 히로인 렌더링 (일러스트는 배경으로 처리되므로 항상 renderHeroines 호출) */}
         {renderHeroines()}
 
         {/* 대화 박스 */}
@@ -458,7 +536,7 @@ export default function GameScreen({ onGoHome, onSetting }) {
           <ResultOverlay
             result={resultData}
             onClose={() => {
-              // Apply deferred navigation that was recorded by the submit handler
+              // 제출 결과를 닫을 때 잠시 보류된 네비게이션을 적용
               if (pendingNextPos !== null) {
                 if (pendingNextPos === "sequential") {
                   goToNextSequential();

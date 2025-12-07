@@ -9,7 +9,6 @@ export default function useChoiceHandler({
   setPos,
   setStoryId,
   goToNextSequential,
-  setShowLoadOverlay,
 }) {
   const [showChoices, setShowChoices] = useState(false);
 
@@ -122,7 +121,6 @@ export default function useChoiceHandler({
       indexMapRef,
       scriptLines,
       setPos,
-      setShowLoadOverlay,
       storyId,
       setStoryId,
     ]
