@@ -6,6 +6,7 @@ export default function HomeMenu({
   onContinue,
   onUserPage,
   onSettings,
+  onLogout,
 }) {
   return (
     <aside className="w-80 h-full bg-white/70 border-r border-white/60 backdrop-blur-sm flex flex-col justify-between px-8 py-10 shadow-xl">
@@ -21,44 +22,57 @@ export default function HomeMenu({
         </h1>
       </div>
 
-      {/* 메뉴들 */}
-      <nav className="flex flex-col gap-4 mb-4">
-        <button
-          className="w-full h-14 flex items-center justify-between rounded-full bg-pink-400/90 hover:bg-pink-500 
-                 text-white px-6 text-lg font-bold shadow-lg transition transform hover:-translate-y-1 hover:shadow-2xl"
-          onClick={onNewGame}
-        >
-          <span>새로 시작하기</span>
-          <span className="text-base opacity-90">▶</span>
-        </button>
+      {/* 하단 영역: 메뉴 버튼들 + 로그아웃 */}
+      <div className="mt-auto flex flex-col gap-4">
+        {/* 메뉴들 */}
+        <nav className="flex flex-col gap-4">
+          <button
+            className="w-full h-14 flex items-center justify-between rounded-full bg-pink-400/90 hover:bg-pink-500 
+                   text-white px-6 text-lg font-bold shadow-lg transition transform hover:-translate-y-1 hover:shadow-2xl"
+            onClick={onNewGame}
+          >
+            <span>새로 시작하기</span>
+            <span className="text-base opacity-90">▶</span>
+          </button>
 
-        <button
-          className="w-full h-14 flex items-center justify-between rounded-full bg-pink-300/90 hover:bg-pink-400 
-                 text-white px-6 text-lg font-bold shadow-lg transition transform hover:-translate-y-1 hover:shadow-2xl"
-          onClick={onContinue}
-        >
-          <span>이어하기</span>
-          <span className="text-base opacity-90">⏵</span>
-        </button>
+          <button
+            className="w-full h-14 flex items-center justify-between rounded-full bg-pink-300/90 hover:bg-pink-400 
+                   text-white px-6 text-lg font-bold shadow-lg transition transform hover:-translate-y-1 hover:shadow-2xl"
+            onClick={onContinue}
+          >
+            <span>이어하기</span>
+            <span className="text-base opacity-90">⏵</span>
+          </button>
 
-        <button
-          className="w-full h-14 flex items-center justify-between rounded-full bg-pink-200/90 hover:bg-pink-300 
-                 text-pink-700 px-6 text-lg font-bold shadow-lg transition transform hover:-translate-y-1 hover:shadow-2xl"
-          onClick={onUserPage}
-        >
-          <span>유저 페이지</span>
-          <span className="text-base opacity-90">👤</span>
-        </button>
+          <button
+            className="w-full h-14 flex items-center justify-between rounded-full bg-pink-200/90 hover:bg-pink-300 
+                   text-pink-700 px-6 text-lg font-bold shadow-lg transition transform hover:-translate-y-1 hover:shadow-2xl"
+            onClick={onUserPage}
+          >
+            <span>유저 페이지</span>
+            <span className="text-base opacity-90">👤</span>
+          </button>
 
+          <button
+            className="w-full h-14 flex items-center justify-between rounded-full bg-white/90 hover:bg-pink-50 
+                   text-pink-500 px-6 text-lg font-bold shadow-lg transition transform hover:-translate-y-1 hover:shadow-2xl"
+            onClick={onSettings}
+          >
+            <span>설정</span>
+            <span className="text-base opacity-90">⚙</span>
+          </button>
+        </nav>
+
+        {/* 로그아웃 버튼 */}
         <button
-          className="w-full h-14 flex items-center justify-between rounded-full bg-white/90 hover:bg-pink-50 
-                 text-pink-500 px-6 text-lg font-bold shadow-lg transition transform hover:-translate-y-1 hover:shadow-2xl"
-          onClick={onSettings}
+          className="w-full h-14 flex items-center justify-center rounded-full bg-gray-200/90 hover:bg-gray-300 
+                 text-gray-700 px-6 text-lg font-bold shadow-lg transition transform hover:-translate-y-1 hover:shadow-2xl"
+          onClick={onLogout}
         >
-          <span>설정</span>
-          <span className="text-base opacity-90">⚙</span>
+          <span>로그아웃</span>
+          <span className="ml-2 text-base opacity-90">🚪</span>
         </button>
-      </nav>
+      </div>
     </aside>
   );
 }
