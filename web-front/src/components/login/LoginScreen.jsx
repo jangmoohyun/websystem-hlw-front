@@ -9,7 +9,7 @@ export default function LoginScreen({ onLoginSuccess, onGoToSignup }) {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
-  const backendUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:3000";
+  const backendUrl = import.meta.env.VITE_BACKEND_URL || "http://hlw-back-dev-alb-1292379324.ap-northeast-2.elb.amazonaws.com";
 
   const handleGoogleLogin = () => {
     // 백엔드 구글 로그인 엔드포인트로 리다이렉트

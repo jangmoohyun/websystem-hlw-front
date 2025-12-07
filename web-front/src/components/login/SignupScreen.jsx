@@ -11,7 +11,7 @@ export default function SignupScreen({ onSignupSuccess, onBackToLogin }) {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  const backendUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:3000";
+  const backendUrl = import.meta.env.VITE_BACKEND_URL || "http://hlw-back-dev-alb-1292379324.ap-northeast-2.elb.amazonaws.com";
 
   const handleSignup = async (e) => {
     e.preventDefault();

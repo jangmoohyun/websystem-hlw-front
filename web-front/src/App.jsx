@@ -75,7 +75,7 @@ function App() {
 
   const handleLogout = async () => {
     try {
-      const backendUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:3000";
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || "http://hlw-back-dev-alb-1292379324.ap-northeast-2.elb.amazonaws.com";
       const accessToken = getAccessToken();
       
       // 백엔드에 로그아웃 요청 (토큰 무효화)
