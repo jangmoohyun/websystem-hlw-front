@@ -14,6 +14,7 @@ env:
   CLOUDFRONT_ID: ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }}
   PROJECT_ROOT: web-front # 소스 코드 디렉토리
   BUILD_DIRECTORY: dist # 💡 최종 빌드 결과물 폴더 (build가 아닌 dist로 가정)
+  VITE_BACKEND_URL: ${{ secrets.VITE_BACKEND_URL }} # 백엔드 ALB 엔드포인트
 
 jobs:
   deploy:
@@ -36,6 +37,8 @@ jobs:
           cache-dependency-path: ${{ env.PROJECT_ROOT }}/package-lock.json 
       
       - name: Install dependencies and build
+        env:
+          VITE_BACKEND_URL: ${{ env.VITE_BACKEND_URL }}
         run: |
           cd ${{ env.PROJECT_ROOT }} # web-front 디렉토리로 이동
           npm install
