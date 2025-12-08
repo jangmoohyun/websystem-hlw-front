@@ -1,5 +1,6 @@
 // src/components/login/SignupScreen.jsx
 import React, { useState } from "react";
+import { apiCall } from "../../utils/api.js";
 
 export default function SignupScreen({ onSignupSuccess, onBackToLogin }) {
   const [email, setEmail] = useState("");
@@ -10,8 +11,6 @@ export default function SignupScreen({ onSignupSuccess, onBackToLogin }) {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-
-  const backendUrl = import.meta.env.VITE_BACKEND_URL || "http://hlw-back-dev-alb-1292379324.ap-northeast-2.elb.amazonaws.com";
 
   const handleSignup = async (e) => {
     e.preventDefault();
@@ -36,11 +35,10 @@ export default function SignupScreen({ onSignupSuccess, onBackToLogin }) {
     setIsLoading(true);
 
     try {
-      const response = await fetch(`${backendUrl}/users/`, {
+      console.log("🔵 회원가입 요청 시작:", { email, hasNickname: !!nickname });
+      
+      const response = await apiCall("/users/", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
         body: JSON.stringify({ 
           email, 
           password, 
@@ -48,22 +46,34 @@ export default function SignupScreen({ onSignupSuccess, onBackToLogin }) {
         }),
       });
 
-      const data = await response.json();
+      console.log("🔵 회원가입 응답 상태:", response.status, response.statusText);
 
       if (!response.ok) {
-        throw new Error(data.message || data.error?.message || "회원가입에 실패했습니다.");
+        const errorData = await response.json().catch(() => ({}));
+        console.error("🔴 회원가입 에러 응답:", errorData);
+        throw new Error(errorData.message || errorData.error?.message || `서버 오류 (${response.status})`);
       }
 
+      const data = await response.json();
+      console.log("🔵 회원가입 응답 데이터:", data);
+
       if (data.success) {
+        console.log("✅ 회원가입 성공");
         // 회원가입 성공 시 로그인 화면으로 이동
         if (onSignupSuccess) {
           onSignupSuccess();
         }
       } else {
-        throw new Error("회원가입 응답 형식이 올바르지 않습니다.");
+        throw new Error(data.message || "회원가입 응답 형식이 올바르지 않습니다.");
       }
     } catch (err) {
-      setError(err.message || "회원가입에 실패했습니다.");
+      console.error("❌ 회원가입 오류:", err);
+      // Failed to fetch 오류를 더 명확한 메시지로 변환
+      if (err.message === "Failed to fetch" || err.name === "TypeError") {
+        setError("서버에 연결할 수 없습니다. 네트워크 연결을 확인해주세요.");
+      } else {
+        setError(err.message || "회원가입에 실패했습니다.");
+      }
     } finally {
       setIsLoading(false);
     }

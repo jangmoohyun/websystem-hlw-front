@@ -12,8 +12,14 @@ export default function LoginScreen({ onLoginSuccess, onGoToSignup }) {
   const backendUrl = import.meta.env.VITE_BACKEND_URL || "http://hlw-back-dev-alb-1292379324.ap-northeast-2.elb.amazonaws.com";
 
   const handleGoogleLogin = () => {
+    // 디버깅 로그
+    console.log('🔵 구글 로그인 버튼 클릭');
+    console.log('🔵 backendUrl:', backendUrl);
+    const redirectUrl = `${backendUrl}/users/google`;
+    console.log('🔵 리디렉트 URL:', redirectUrl);
+    
     // 백엔드 구글 로그인 엔드포인트로 리다이렉트
-    window.location.href = `${backendUrl}/users/google`;
+    window.location.href = redirectUrl;
   };
 
   const handleLogin = async (e) => {

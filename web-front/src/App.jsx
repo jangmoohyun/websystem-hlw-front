@@ -5,11 +5,14 @@ import LoginScreen from "./components/login/LoginScreen";
 import SignupScreen from "./components/login/SignupScreen";
 import GameScreen from "./components/game/GameScreen";
 import HomeScreen from "./components/home/HomeScreen";
+import UserPage from "./components/user/UserPage";
+import LoadScreen from "./components/home/LoadScreen.jsx";
 import { setTokens, removeTokens, getAccessToken, getRefreshToken, checkAndRefreshToken } from "./utils/api.js";
 
 function App() {
-  // login | signup | home | game
+  // login | signup | home | game | userPage
   const [screen, setScreen] = useState("login");
+  const [loadedSave, setLoadedSave] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   // 구글 로그인 콜백 처리
@@ -99,8 +102,18 @@ function App() {
   };
 
   const handleNewGame = () => {
+    setLoadedSave(null);
     setScreen("game");
   };
+
+  const handleContinueGame = () => {
+      setScreen("load");
+  }
+
+    const handleLoadedFromSave = (saveData) => {
+        setLoadedSave(saveData);
+        setScreen("game");
+    };
   
   const handleGoHome = () => {
     setScreen("home");
@@ -137,13 +150,22 @@ function App() {
       {screen === "home" && (
         <HomeScreen
           onNewGame={handleNewGame}
-          onContinue={() => console.log("이어하기")}
-          onUserPage={() => console.log("유저 페이지")}
+          onContinue={handleContinueGame}
+          onUserPage={() => setScreen("userPage")}
           onSettings={() => console.log("설정")}
           onLogout={handleLogout}
         />
       )}
-      {screen === "game" && <GameScreen onGoHome={handleGoHome} />}
+        {screen === "load" && (
+            <LoadScreen
+                onLoaded={handleLoadedFromSave}
+                onCancel={handleGoHome}
+            />
+        )}
+      {screen === "game" && <GameScreen onGoHome={handleGoHome} initialSave={loadedSave} />}
+      {screen === "userPage" && (
+        <UserPage onBack={() => setScreen("home")} />
+      )}
     </>
   );
 }
