@@ -28,7 +28,7 @@ export default function useStoryLoader(storyId) {
         if (typeof lines === "string") {
           try {
             lines = JSON.parse(lines);
-          // eslint-disable-next-line no-unused-vars
+            // eslint-disable-next-line no-unused-vars
           } catch (e) {
             lines = [];
           }

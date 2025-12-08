@@ -36,7 +36,7 @@ const FALLBACK_HEROINE_ORDER = ["이시현", "유자빈", "파인선"];
 
 export default function GameScreen({ onGoHome, onSetting }) {
   // 현재 플레이 중인 스토리 ID
-  const [storyId, setStoryId] = useState(3); //시작은 1
+  const [storyId, setStoryId] = useState(1); //시작은 1
 
   // 스토리/스크립트 로딩
   const {
@@ -117,7 +117,28 @@ export default function GameScreen({ onGoHome, onSetting }) {
   // 순차 진행 : 다음 라인으로 이동
   const goToNextSequential = useCallback(() => {
     if (!Array.isArray(scriptLines) || scriptLines.length === 0) return;
-    setPos((prev) => Math.min(prev + 1, scriptLines.length - 1));
+    setPos((prev) => {
+      const last = scriptLines.length - 1;
+      let next = Math.min(prev + 1, last);
+
+      // 건너뛰어야 할 노드가 있을 시 meta.condition이 있는 노드는 자동으로 건너뛰도록 함
+      while (next <= last) {
+        const node = scriptLines[next];
+        if (!node) break;
+        const rawMeta = node.meta;
+        const meta = Array.isArray(rawMeta) ? rawMeta[0] : rawMeta || {};
+        if (meta && meta.condition) {
+          // 조건부 대사 노드는 건너뛰기
+          next = Math.min(next + 1, last);
+          // 만약 이미 마지막이면 멈춤
+          if (next === last) break;
+          continue;
+        }
+        break;
+      }
+
+      return next;
+    });
   }, [scriptLines]);
 
   // 훅으로 분리한 선택/문제 처리 (goToNextSequential 선언 후 호출)
@@ -275,7 +296,7 @@ export default function GameScreen({ onGoHome, onSetting }) {
       setHasHeroineAppeared(true);
       return;
     }
-  }, [currentNode, storyHeroines]);
+  }, [currentNode, goToNextSequential, storyHeroines]);
 
   // choice/problem 진입 처리는 훅(`useChoiceHandler`, `useProblemHandler`)으로 분리되었습니다.
 
