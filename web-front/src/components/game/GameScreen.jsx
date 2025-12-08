@@ -321,12 +321,6 @@ export default function GameScreen({onGoHome, onSetting, initialSave}) {
       Array.isArray(storyHeroines) && storyHeroines.length > 0
         ? storyHeroines.map((h) => h.name)
         : FALLBACK_HEROINE_ORDER;
-        
-        // storyHeroines를 통해 해당 스토리에 연결된 히로인 이름 목록 생성
-        const knownNames =
-            Array.isArray(storyHeroines) && storyHeroines.length > 0
-                ? storyHeroines.map((h) => h.name)
-                : FALLBACK_HEROINE_ORDER;
 
         //대사 라인에서 speaker가 누구인지(이를 통해 해당 히로인 이미지 표시)
         if (
