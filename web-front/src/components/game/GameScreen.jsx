@@ -209,7 +209,9 @@ export default function GameScreen({ onGoHome, onSetting, initialSave }) {
 
     const fetchStoryMeta = async () => {
       try {
-        const res = await fetch(`/stories/${storyId}`); //스토리 메타정보 요청
+        const backendUrl =
+          "https://hlw-back-dev-alb-1292379324.ap-northeast-2.elb.amazonaws.com";
+        const res = await fetch(`${backendUrl}/stories/${storyId}`); //스토리 메타정보 요청
         const json = await res.json();
         if (!json.success) throw new Error(json.error || "fetch failed");
 
