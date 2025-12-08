@@ -73,6 +73,7 @@ export default function GameScreen({ onGoHome, onSetting }) {
   const [illustrationActive, setIllustrationActive] = useState(false);
   const [illustrationImage, setIllustrationImage] = useState(null);
   const illustrationTimerRef = useRef(null);
+  const lastStoryEndRef = useRef(null);
 
   // 대사 타이핑 효과 --------------------------------------------------------
   const { displayed, isAnimating, setDisplayed, setIsAnimating } = useTyping(
@@ -280,6 +281,21 @@ export default function GameScreen({ onGoHome, onSetting }) {
       // 일러스트 모드에서는 히로인 등장은 숨김
       setHasHeroineAppeared(false);
       return; // 일러스트 노드의 경우 아래 기존 로직을 무시
+    }
+
+    // storyEnd 노드 처리: 다음 스토리로 이동
+    if (nodeType === "storyend") {
+      const nextCode =
+        currentNode.nextStoryCode ??
+        (Array.isArray(currentNode.meta)
+          ? currentNode.meta[0]?.nextStoryCode
+          : currentNode.meta?.nextStoryCode);
+      if (nextCode && lastStoryEndRef.current !== String(nextCode)) {
+        lastStoryEndRef.current = String(nextCode);
+        setStoryId(nextCode);
+        setPos(0);
+      }
+      return;
     }
 
     // storyHeroines를 통해 해당 스토리에 연결된 히로인 이름 목록 생성
