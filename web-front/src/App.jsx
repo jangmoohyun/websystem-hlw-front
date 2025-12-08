@@ -5,10 +5,11 @@ import LoginScreen from "./components/login/LoginScreen";
 import SignupScreen from "./components/login/SignupScreen";
 import GameScreen from "./components/game/GameScreen";
 import HomeScreen from "./components/home/HomeScreen";
+import UserPage from "./components/user/UserPage";
 import { setTokens, removeTokens, getAccessToken, getRefreshToken, checkAndRefreshToken } from "./utils/api.js";
 
 function App() {
-  // login | signup | home | game
+  // login | signup | home | game | userPage
   const [screen, setScreen] = useState("login");
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
@@ -138,12 +139,15 @@ function App() {
         <HomeScreen
           onNewGame={handleNewGame}
           onContinue={() => console.log("이어하기")}
-          onUserPage={() => console.log("유저 페이지")}
+          onUserPage={() => setScreen("userPage")}
           onSettings={() => console.log("설정")}
           onLogout={handleLogout}
         />
       )}
       {screen === "game" && <GameScreen onGoHome={handleGoHome} />}
+      {screen === "userPage" && (
+        <UserPage onBack={() => setScreen("home")} />
+      )}
     </>
   );
 }
