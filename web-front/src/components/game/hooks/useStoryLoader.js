@@ -13,14 +13,12 @@ export default function useStoryLoader(storyId) {
     let mounted = true;
     const fetchStory = async () => {
       try {
-        const backendUrl =
-          "https://hlw-back-dev-alb-1292379324.ap-northeast-2.elb.amazonaws.com";
         console.log("[useStoryLoader] 요청 시작", {
           storyId,
-          url: `${backendUrl}/stories/${storyId}`,
+          url: `/stories/${storyId}`,
         });
         setLoading(true);
-        const res = await fetch(`${backendUrl}/stories/${storyId}`, {
+        const res = await fetch(`/stories/${storyId}`, {
           cache: "no-store",
         });
         console.log("[useStoryLoader] 응답 상태", {

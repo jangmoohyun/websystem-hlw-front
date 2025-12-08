@@ -209,9 +209,7 @@ export default function GameScreen({ onGoHome, onSetting, initialSave }) {
 
     const fetchStoryMeta = async () => {
       try {
-        const backendUrl =
-          "https://hlw-back-dev-alb-1292379324.ap-northeast-2.elb.amazonaws.com";
-        const url = `${backendUrl}/stories/${storyId}`;
+        const url = `/stories/${storyId}`;
         console.log("[GameScreen] 스토리 메타 요청 시작", {
           storyId,
           url,
