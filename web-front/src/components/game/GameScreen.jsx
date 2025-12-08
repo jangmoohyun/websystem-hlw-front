@@ -36,7 +36,7 @@ const FALLBACK_HEROINE_ORDER = ["이시현", "유자빈", "파인선"];
 
 export default function GameScreen({ onGoHome, onSetting }) {
   // 현재 플레이 중인 스토리 ID
-  const [storyId, setStoryId] = useState(1); //시작은 1
+  const [storyId, setStoryId] = useState(7); //시작은 1
 
   // 스토리/스크립트 로딩
   const {
@@ -63,6 +63,7 @@ export default function GameScreen({ onGoHome, onSetting }) {
   //CodeOverlay 닫은 직후 클릭 한 번 억제용
   const [suppressAdvance, setSuppressAdvance] = useState(false);
   const [showLoadOverlay, setShowLoadOverlay] = useState(false); // 로딩창 오버레이 (훅에 전달)
+  const [activeCondition, setActiveCondition] = useState(null); // 선택/제출로 설정되는 메타 condition 키
   const [showSaveMenu, setShowSaveMenu] = useState(false);
 
   // 스토리 메타 데이터(히로인/문제) & 히로인 등장 여부 ----------------------
@@ -122,25 +123,37 @@ export default function GameScreen({ onGoHome, onSetting }) {
       const last = scriptLines.length - 1;
       let next = Math.min(prev + 1, last);
 
-      // 건너뛰어야 할 노드가 있을 시 meta.condition이 있는 노드는 자동으로 건너뛰도록 함
+      // 건너뛰어야 할 노드가 있을 시 meta.condition 처리
       while (next <= last) {
         const node = scriptLines[next];
         if (!node) break;
         const rawMeta = node.meta;
         const meta = Array.isArray(rawMeta) ? rawMeta[0] : rawMeta || {};
         if (meta && meta.condition) {
-          // 조건부 대사 노드는 건너뛰기
+          if (activeCondition && meta.condition === activeCondition) {
+            break;
+          }
+
           next = Math.min(next + 1, last);
-          // 만약 이미 마지막이면 멈춤
           if (next === last) break;
           continue;
         }
+
+        if (!meta?.condition && activeCondition) {
+          try {
+            setActiveCondition(null);
+            // eslint-disable-next-line no-unused-vars
+          } catch (e) {
+            /* ignore */
+          }
+        }
+
         break;
       }
 
       return next;
     });
-  }, [scriptLines]);
+  }, [scriptLines, activeCondition]);
 
   // 훅으로 분리한 선택/문제 처리 (goToNextSequential 선언 후 호출)
   const {
@@ -182,6 +195,7 @@ export default function GameScreen({ onGoHome, onSetting }) {
       setStoryId,
       goToNextSequential,
       setShowLoadOverlay,
+      setActiveCondition,
     });
 
   // 스토리(히로인/문제) 로드 -----------------------------------

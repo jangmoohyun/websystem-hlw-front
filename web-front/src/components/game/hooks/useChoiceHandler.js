@@ -10,6 +10,7 @@ export default function useChoiceHandler({
   setPos,
   setStoryId,
   goToNextSequential,
+  setActiveCondition,
 }) {
   const [showChoices, setShowChoices] = useState(false);
 
@@ -28,6 +29,31 @@ export default function useChoiceHandler({
       const choice = currentNode.choices?.[choiceIndex];
       setShowChoices(false);
 
+      // 즉시 condition을 설정하여 이후 네비게이션에서 사용할 수 있도록 함
+      if (choice && typeof setActiveCondition === "function") {
+        setActiveCondition(choice.condition ?? null);
+      }
+
+      // choice.condition이 있으면 스크립트에서 다음으로 나오는 해당 condition을 가진
+      // 노드를 찾아 바로 이동한다.
+      const chosenCond = choice?.condition ?? null;
+      if (chosenCond) {
+        for (
+          let i = (currentNode?.index || 0) + 1;
+          i < scriptLines.length;
+          i++
+        ) {
+          const n = scriptLines[i];
+          if (!n) continue;
+          const rawMeta = n.meta;
+          const meta = Array.isArray(rawMeta) ? rawMeta[0] : rawMeta || {};
+          if (meta && meta.condition === chosenCond) {
+            setPos(i);
+            return;
+          }
+        }
+      }
+
       const candidateTargets = [];
       if (choice && typeof choice === "object") {
         candidateTargets.push(
@@ -38,7 +64,7 @@ export default function useChoiceHandler({
         );
       }
 
-      // 호감도/분기/다른 스토리 이동 등 서버 처리가 필요한 경우
+      // 서버처리가 필요한 경우 (호감도/분기 등)
       const needsServer =
         choice &&
         (choice.heroineName ||
@@ -49,50 +75,63 @@ export default function useChoiceHandler({
         (async () => {
           try {
             const token = getAccessToken();
-            const headers = {
-              "Content-Type": "application/json",
-            };
+            const headers = { "Content-Type": "application/json" };
             if (token) headers.Authorization = `Bearer ${token}`;
-
-            // Prepare request body and include branchStoryId fallback keys
-            const branchStoryId =
-              choice?.branchStoryId ??
-              choice?.branchStoryCode ??
-              choice?.branch_story_id ??
-              (choice?.branchStory ? choice.branchStory.id : undefined);
-
-            const body = {
-              storyId,
-              currentLineIndex: currentNode?.index,
-              choiceIndex,
-              choice,
-            };
-            if (branchStoryId !== undefined) body.branchStoryId = branchStoryId;
-
-            console.debug("[useChoiceHandler] sending choice select", { body });
 
             const res = await fetch("/choices/select", {
               method: "POST",
               headers,
               credentials: "include",
-              body: JSON.stringify(body),
+              body: JSON.stringify({
+                storyId,
+                currentLineIndex: currentNode?.index,
+                choiceIndex,
+                choice,
+              }),
             });
 
-            if (res.status === 401) {
-              throw new Error("Authentication required");
-            }
+            if (res.status === 401) throw new Error("Authentication required");
 
             const json = await res.json();
-            if (!json.success) {
-              console.error("[useChoiceHandler] choice select failed response", json);
-              throw new Error(json.message || "choice failed");
-            }
+            if (!json.success) throw new Error(json.message || "choice failed");
 
             const {
               action,
               storyId: nextStoryId,
               targetIndex,
             } = json.result || {};
+
+            let serverCond = null;
+            if (typeof setActiveCondition === "function") {
+              serverCond =
+                (json.result &&
+                  (json.result.condition ||
+                    json.result.canonicalChoice?.condition)) ||
+                null;
+              if (serverCond) setActiveCondition(serverCond);
+              else setActiveCondition(choice?.condition ?? null);
+            }
+
+            // 선택에 따라 조건 처리
+            const effectiveCond = serverCond || choice?.condition || null;
+            if (effectiveCond) {
+              for (
+                let i = (currentNode?.index || 0) + 1;
+                i < scriptLines.length;
+                i++
+              ) {
+                const n = scriptLines[i];
+                if (!n) continue;
+                const rawMeta = n.meta;
+                const meta = Array.isArray(rawMeta)
+                  ? rawMeta[0]
+                  : rawMeta || {};
+                if (meta && meta.condition === effectiveCond) {
+                  setPos(i);
+                  return;
+                }
+              }
+            }
 
             if (action === "branch" && nextStoryId) {
               setStoryId(nextStoryId);
@@ -105,8 +144,6 @@ export default function useChoiceHandler({
                 choice.nextIndex,
                 choice.onSubmitTargetIndex,
               ];
-
-              // 대사 라인을 이동해야 하는 경우(선택지에 따라 다른 대사 출력 시)
               let resolved = null;
               for (const t of candidateTargets2) {
                 const p = resolveTargetToPos(indexMapRef, scriptLines, t);
@@ -116,16 +153,19 @@ export default function useChoiceHandler({
                 }
               }
               if (resolved !== null) setPos(resolved);
-              else goToNextSequential(); // 다음 대사로
+              else goToNextSequential();
             }
-          } catch {
-            goToNextSequential(); // 다음 대사로
+            // eslint-disable-next-line no-unused-vars
+          } catch (err) {
+            if (typeof setActiveCondition === "function")
+              setActiveCondition(null);
+            goToNextSequential();
           }
         })();
         return;
       }
 
-      // 서버 없는 로컬 분기 처리
+      // 로컬 분기 처리
       let resolved = null;
       for (const t of candidateTargets) {
         const p = resolveTargetToPos(indexMapRef, scriptLines, t);
@@ -139,6 +179,7 @@ export default function useChoiceHandler({
         setPos(resolved);
         return;
       }
+
       goToNextSequential();
     },
     [
@@ -149,13 +190,9 @@ export default function useChoiceHandler({
       setPos,
       storyId,
       setStoryId,
+      setActiveCondition,
     ]
   );
 
-  return {
-    showChoices,
-    setShowChoices,
-    choiceLabels,
-    handleChoice,
-  };
+  return { showChoices, setShowChoices, choiceLabels, handleChoice };
 }
