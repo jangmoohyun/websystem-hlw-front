@@ -12,6 +12,7 @@ export default function SaveMenu({
   lineIndex,
   heroineLikes = [],
   onLoad,
+  mode = "save",
 }) {
   const { getSaves, saveGame, loadGame } = useSaveManager();
   const [slots, setSlots] = useState([]);
@@ -105,7 +106,14 @@ export default function SaveMenu({
                 </div>
               </div>
               <div>
-                <button onClick={() => handleSave(slotNum)}>저장</button>
+                  {mode === "save" && (
+                      <button
+                          onClick={() => handleSave(slotNum)}
+                          disabled={loading}
+                      >
+                          저장
+                      </button>
+                  )}
                 <button
                   onClick={() => handleLoad(slotNum)}
                   style={{ marginLeft: 6 }}
