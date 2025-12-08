@@ -67,6 +67,7 @@ export default function GameScreen({onGoHome, onSetting, initialSave}) {
     const [suppressAdvance, setSuppressAdvance] = useState(false);
     const [showLoadOverlay, setShowLoadOverlay] = useState(false); // 로딩창 오버레이 (훅에 전달)
     const [showSaveMenu, setShowSaveMenu] = useState(false);
+    const lastStoryEndRef = useRef(null);
 
     // 스토리 메타 데이터(히로인/문제) & 히로인 등장 여부 ----------------------
     const [storyHeroines, setStoryHeroines] = useState([]);
@@ -300,6 +301,27 @@ export default function GameScreen({onGoHome, onSetting, initialSave}) {
             return; // 일러스트 노드의 경우 아래 기존 로직을 무시
         }
 
+    // storyEnd 노드 처리: 다음 스토리로 이동
+    if (nodeType === "storyend") {
+      const nextCode =
+        currentNode.nextStoryCode ??
+        (Array.isArray(currentNode.meta)
+          ? currentNode.meta[0]?.nextStoryCode
+          : currentNode.meta?.nextStoryCode);
+      if (nextCode && lastStoryEndRef.current !== String(nextCode)) {
+        lastStoryEndRef.current = String(nextCode);
+        setStoryId(nextCode);
+        setPos(0);
+      }
+      return;
+    }
+
+    // storyHeroines를 통해 해당 스토리에 연결된 히로인 이름 목록 생성
+    const knownNames =
+      Array.isArray(storyHeroines) && storyHeroines.length > 0
+        ? storyHeroines.map((h) => h.name)
+        : FALLBACK_HEROINE_ORDER;
+        
         // storyHeroines를 통해 해당 스토리에 연결된 히로인 이름 목록 생성
         const knownNames =
             Array.isArray(storyHeroines) && storyHeroines.length > 0

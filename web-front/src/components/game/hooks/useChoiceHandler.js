@@ -54,16 +54,28 @@ export default function useChoiceHandler({
             };
             if (token) headers.Authorization = `Bearer ${token}`;
 
+            // Prepare request body and include branchStoryId fallback keys
+            const branchStoryId =
+              choice?.branchStoryId ??
+              choice?.branchStoryCode ??
+              choice?.branch_story_id ??
+              (choice?.branchStory ? choice.branchStory.id : undefined);
+
+            const body = {
+              storyId,
+              currentLineIndex: currentNode?.index,
+              choiceIndex,
+              choice,
+            };
+            if (branchStoryId !== undefined) body.branchStoryId = branchStoryId;
+
+            console.debug("[useChoiceHandler] sending choice select", { body });
+
             const res = await fetch("/choices/select", {
               method: "POST",
               headers,
               credentials: "include",
-              body: JSON.stringify({
-                storyId,
-                currentLineIndex: currentNode?.index,
-                choiceIndex,
-                choice,
-              }),
+              body: JSON.stringify(body),
             });
 
             if (res.status === 401) {
@@ -71,7 +83,10 @@ export default function useChoiceHandler({
             }
 
             const json = await res.json();
-            if (!json.success) throw new Error(json.message || "choice failed");
+            if (!json.success) {
+              console.error("[useChoiceHandler] choice select failed response", json);
+              throw new Error(json.message || "choice failed");
+            }
 
             const {
               action,
