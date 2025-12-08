@@ -14,8 +14,7 @@ export default function useStoryLoader(storyId) {
     const fetchStory = async () => {
       try {
         const backendUrl =
-          import.meta.env.VITE_BACKEND_URL ||
-          "http://hlw-back-dev-alb-1292379324.ap-northeast-2.elb.amazonaws.com";
+          "https://hlw-back-dev-alb-1292379324.ap-northeast-2.elb.amazonaws.com";
         setLoading(true);
         const res = await fetch(`${backendUrl}/stories/${storyId}`, {
           cache: "no-store",
