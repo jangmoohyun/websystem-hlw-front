@@ -82,7 +82,11 @@ export default function UserPage({ onBack }) {
     );
   }
 
-  const { user, progresses, heroineLikes } = userData;
+  const {
+    user = {},
+    progresses = [],
+    heroineLikes = [],
+  } = userData || {};
 
   return (
     <div className="w-screen h-screen bg-pink-100 overflow-y-auto font-['Pretendard','Noto Sans KR',system-ui]">
@@ -174,10 +178,10 @@ export default function UserPage({ onBack }) {
                   <div className="flex items-center justify-between mb-2">
                     <div>
                       <p className="font-semibold text-gray-800">
-                        {item.heroine.name}
+                        {item.heroine?.name || "이름 없음"}
                       </p>
                       <p className="text-sm text-gray-600">
-                        {item.heroine.language}
+                        {item.heroine?.language || "언어 정보 없음"}
                       </p>
                     </div>
                     <div className="text-right">
