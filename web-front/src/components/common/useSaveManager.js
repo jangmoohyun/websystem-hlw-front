@@ -1,12 +1,18 @@
 import { useCallback } from "react";
+import {getAccessToken} from "../../utils/api.js";
 
 const API_BASE = "";
 
 export function useSaveManager() {
   const getSaves = useCallback(async () => {
+      const token = getAccessToken();
+      const headers = {
+          "Content-Type": "application/json",
+      };
+      if (token) headers.Authorization = `Bearer ${token}`;
     const res = await fetch(`${API_BASE}/progress/saves`, {
       method: "GET",
-      headers: { "Content-Type": "application/json" },
+      headers,
       credentials: "include",
     });
     const json = await res.json();
@@ -16,9 +22,14 @@ export function useSaveManager() {
 
   const saveGame = useCallback(
     async ({ slot, storyId, lineIndex, heroineLikes }) => {
+        const token = getAccessToken();
+        const headers = {
+            "Content-Type": "application/json",
+        };
+        if (token) headers.Authorization = `Bearer ${token}`;
       const res = await fetch(`${API_BASE}/progress/save`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers,
         credentials: "include",
         body: JSON.stringify({ slot, storyId, lineIndex, heroineLikes }),
       });
@@ -30,11 +41,16 @@ export function useSaveManager() {
   );
 
   const loadGame = useCallback(async ({ slot }) => {
+      const token = getAccessToken();
+      const headers = {
+          "Content-Type": "application/json",
+      };
+      if (token) headers.Authorization = `Bearer ${token}`;
     const res = await fetch(
       `${API_BASE}/progress/save?slot=${encodeURIComponent(slot)}`,
       {
         method: "GET",
-        headers: { "Content-Type": "application/json" },
+        headers,
         credentials: "include",
       }
     );
