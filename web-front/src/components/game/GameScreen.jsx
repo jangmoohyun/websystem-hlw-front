@@ -35,9 +35,11 @@ const FALLBACK_HEROINE_ORDER = ["이시현", "유자빈", "파인선"];
 
 // 컴포넌트 시작 & 기본 스토리 상태 -----------------------------------------
 
+
 export default function GameScreen({onGoHome, onSetting, initialSave}) {
     // 현재 플레이 중인 스토리 ID
     const [storyId, setStoryId] = useState(initialSave?.storyId ?? 1); //시작은 1
+
 
     const { saveGame } = useSaveManager();
 
@@ -61,7 +63,7 @@ export default function GameScreen({onGoHome, onSetting, initialSave}) {
     );
     const activeSpeaker = currentNode?.speaker ?? null;
 
-    // UI 오버레이 / 진행 제어 상태 -------------------------------------------
+
 
     //CodeOverlay 닫은 직후 클릭 한 번 억제용
     const [suppressAdvance, setSuppressAdvance] = useState(false);
@@ -80,10 +82,170 @@ export default function GameScreen({onGoHome, onSetting, initialSave}) {
     // load
     const [pendingLoad, setPendingLoad] = useState(null);
 
+
+  // 히로인 수: DB값 우선, 없으면 스크립트 추정값
+  const effectiveHeroineCount = useMemo(() => {
+    if (Array.isArray(storyHeroines) && storyHeroines.length > 0) {
+      return storyHeroines.length;
+    }
+    return scriptHeroineCount;
+  }, [storyHeroines, scriptHeroineCount]); // storyHeroines에서 히로인 수 체크
+
+  // 장면에서 히로인 3명인지 1명인지
+  const visibleHeroines = useMemo(
+    () => computeVisibleHeroines(currentNode, effectiveHeroineCount),
+    [currentNode, effectiveHeroineCount]
+  );
+
+  // 코드 제출용 언어 ID (시현 = C, 파인선 = Python, 유자빈 = Java)
+  const overlayDefaultLangId = useMemo(() => {
+    // Prefer normalized languageId from backend if present
+    if (activeSpeaker && Array.isArray(storyHeroines)) {
+      const found = storyHeroines.find((h) => h.name === activeSpeaker);
+      if (found && typeof found.languageId === "number")
+        return found.languageId;
+    }
+    if (Array.isArray(storyHeroines) && storyHeroines.length > 0) {
+      const first = storyHeroines[0];
+      if (first && typeof first.languageId === "number")
+        return first.languageId;
+    }
+    // Fallback to Python
+    return 71;
+  }, [activeSpeaker, storyHeroines]);
+
+  // 훅으로 분리한 선택/문제 처리는 goToNextSequential 선언 후에 호출.
+
+  // 대사 라인 이동 -------------------------------------------
+  // 순차 진행 : 다음 라인으로 이동
+  const goToNextSequential = useCallback(() => {
+    if (!Array.isArray(scriptLines) || scriptLines.length === 0) return;
+    setPos((prev) => {
+      const last = scriptLines.length - 1;
+      let next = Math.min(prev + 1, last);
+
+      // 건너뛰어야 할 노드가 있을 시 meta.condition 처리
+      while (next <= last) {
+        const node = scriptLines[next];
+        if (!node) break;
+        const rawMeta = node.meta;
+        const meta = Array.isArray(rawMeta) ? rawMeta[0] : rawMeta || {};
+        if (meta && meta.condition) {
+          if (activeCondition && meta.condition === activeCondition) {
+            break;
+          }
+
+          next = Math.min(next + 1, last);
+          if (next === last) break;
+          continue;
+        }
+
+        if (!meta?.condition && activeCondition) {
+          try {
+            setActiveCondition(null);
+            // eslint-disable-next-line no-unused-vars
+          } catch (e) {
+            /* ignore */
+          }
+        }
+
+        break;
+      }
+
+      return next;
+    });
+  }, [scriptLines, activeCondition]);
+
+  // 훅으로 분리한 선택/문제 처리 (goToNextSequential 선언 후 호출)
+  const {
+    showCodeOverlay,
+    setShowCodeOverlay,
+    problemData,
+    userCode,
+    setUserCode,
+    handleSubmitCode,
+    canAdvance,
+    setCanAdvance,
+    requiredProblemNodeIndex,
+    resultData,
+    setResultData,
+    pendingNextPos,
+    setPendingNextPos,
+  } = useProblemHandler({
+    currentNode,
+    pos,
+    storyProblems,
+    setDisplayed,
+    setIsAnimating,
+    indexMapRef,
+    scriptLines,
+    storyHeroines,
+    storyId,
+    goToNextSequential,
+    setPos,
+    setShowLoadOverlay,
+  });
+
+  const { showChoices, setShowChoices, choiceLabels, handleChoice } =
+    useChoiceHandler({
+      currentNode,
+      indexMapRef,
+      scriptLines,
+      storyId,
+      setPos,
+      setStoryId,
+      goToNextSequential,
+      setShowLoadOverlay,
+      setActiveCondition,
+    });
+
+  // 스토리(히로인/문제) 로드 -----------------------------------
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const fetchStoryMeta = async () => {
+      try {
+        const res = await fetch(`/stories/${storyId}`); //스토리 메타정보 요청
+        const json = await res.json();
+        if (!json.success) throw new Error(json.error || "fetch failed");
+
+        if (cancelled) return;
+        setStoryHeroines(json.data?.heroines ?? []);
+        setStoryProblems(json.data?.problems ?? []);
+        // eslint-disable-next-line no-unused-vars
+      } catch (e) {
+        if (!cancelled) {
+          setStoryHeroines([]);
+          setStoryProblems([]);
+        }
+      }
+    };
+
+    fetchStoryMeta();
+    return () => {
+      cancelled = true;
+    };
+  }, [storyId]);
+
+  //스크립트 로드 시 첫 노드 위치 설정 -------------------------------
+
+  useEffect(() => {
+    if (!Array.isArray(scriptLines) || scriptLines.length === 0) return;
+
+    const firstIndex = scriptLines.findIndex(
+      (n) =>
+        n &&
+        (n.type === "dialogue" ||
+          n.type === "narration" ||
+          n.type === "choice" ||
+          n.speaker)
+
     // 대사 타이핑 효과 --------------------------------------------------------
     const {displayed, isAnimating, setDisplayed, setIsAnimating} = useTyping(
         currentNode?.text ?? "",
         25
+
     );
 
     // 히로인 수: DB값 우선, 없으면 스크립트 추정값
