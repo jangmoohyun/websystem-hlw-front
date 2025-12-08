@@ -80,7 +80,14 @@ export default function useProblemHandler({
         setRequiredProblemNodeIndex(null);
       }
     })();
-  }, [currentNode, pos, setDisplayed, setIsAnimating, storyProblems]);
+  }, [
+    currentNode,
+    pos,
+    scriptLines,
+    setDisplayed,
+    setIsAnimating,
+    storyProblems,
+  ]);
 
   // 제출 처리
   const handleSubmitCode = useCallback(
