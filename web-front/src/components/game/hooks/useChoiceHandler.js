@@ -1,5 +1,6 @@
 import { useCallback, useState } from "react";
 import { resolveTargetToPos } from "../utils/targetResolver";
+import { getAccessToken } from "../../../utils/api.js";
 
 export default function useChoiceHandler({
   currentNode,
@@ -47,17 +48,27 @@ export default function useChoiceHandler({
       if (needsServer) {
         (async () => {
           try {
+            const token = getAccessToken();
+            const headers = {
+              "Content-Type": "application/json",
+            };
+            if (token) headers.Authorization = `Bearer ${token}`;
+
             const res = await fetch("/choices/select", {
               method: "POST",
-              headers: { "Content-Type": "application/json" },
+              headers,
+              credentials: "include",
               body: JSON.stringify({
-                userId: 1, // 개발용
                 storyId,
                 currentLineIndex: currentNode?.index,
                 choiceIndex,
                 choice,
               }),
             });
+
+            if (res.status === 401) {
+              throw new Error("Authentication required");
+            }
 
             const json = await res.json();
             if (!json.success) throw new Error(json.message || "choice failed");

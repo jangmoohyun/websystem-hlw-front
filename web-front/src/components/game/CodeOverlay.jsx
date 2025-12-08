@@ -20,7 +20,7 @@ export default function CodeOverlay({
     }
   }, [initialLanguageId]);
 
-  // 공개 테스트케이스를 문제 본문에 병합하여 인라인으로 표시
+  // 공개 테스트케이스를 문제 본문에  표시
   const combinedProblem = (() => {
     const base = problem ?? "";
     if (!testcases || testcases.length === 0) return base;
@@ -29,7 +29,7 @@ export default function CodeOverlay({
         const inText = tc.input ?? tc.content ?? "";
         const outText = tc.expected ?? "";
         if (inText && outText)
-          return `${idx + 1}. 입력:\n${inText}\n출력:\n${outText}`;
+          return `${idx + 1}. 입력: ${inText}  출력: ${outText} `;
         if (inText) return `${idx + 1}. ${inText}`;
         return `${idx + 1}. ${tc.content ?? tc.expected ?? ""}`;
       })

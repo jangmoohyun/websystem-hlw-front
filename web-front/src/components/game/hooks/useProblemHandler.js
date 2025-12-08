@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { resolveTargetToPos } from "../utils/targetResolver";
+import { getAccessToken } from "../../../utils/api.js";
 
 export default function useProblemHandler({
   currentNode,
@@ -102,7 +103,6 @@ export default function useProblemHandler({
         );
 
         const payload = {
-          userId: 1, // 개발용
           nodeIndex: pos,
           choiceId: currentNode?.choiceId ?? null,
           problemId: problemData?.id ?? currentNode?.problemId ?? null,
@@ -112,9 +112,15 @@ export default function useProblemHandler({
 
         // 제출 API 호출
         console.debug("[useProblemHandler] submitting payload", payload);
+
+        const token = getAccessToken();
+        const headers = { "Content-Type": "application/json" };
+        if (token) headers.Authorization = `Bearer ${token}`;
+
         const res = await fetch(`/problems/${storyId}/submit-code`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers,
+          credentials: "include",
           body: JSON.stringify(payload),
         });
 
@@ -141,14 +147,31 @@ export default function useProblemHandler({
         if (target == null) {
           try {
             const conditionKey = passed ? "pass" : "fail";
-            const nodes = Array.isArray(scriptLines) ? scriptLines : [];
-            const condNode = nodes.find(
-              (n) =>
-                Number(n.index) > Number(currentNode.index) &&
-                n.meta &&
-                n.meta.condition === conditionKey
-            );
-            if (condNode) target = condNode.index;
+            // 현재 위치(pos) 이후 노드만 검사하도록 slice 사용
+            const nodes = Array.isArray(scriptLines)
+              ? scriptLines.slice(Number(pos) + 1)
+              : [];
+
+            // meta가 배열로 들어올 수도 있으니 안전하게 확인
+            const condNode = nodes.find((n) => {
+              if (!n || !n.meta) return false;
+              const rawMeta = Array.isArray(n.meta) ? n.meta[0] : n.meta;
+              return rawMeta && rawMeta.condition === conditionKey;
+            });
+
+            if (condNode) {
+              target = condNode.index;
+              console.debug("[useProblemHandler] found conditional node", {
+                conditionKey,
+                foundIndex: condNode.index,
+                pos,
+              });
+            } else {
+              console.debug("[useProblemHandler] no conditional node found", {
+                conditionKey,
+                pos,
+              });
+            }
             // eslint-disable-next-line no-unused-vars
           } catch (e) {
             // ignore and fallback to sequential
@@ -157,8 +180,11 @@ export default function useProblemHandler({
         }
 
         const p = resolveTargetToPos(indexMapRef, scriptLines, target);
-        if (p !== null) setPendingNextPos(p);
-        else setPendingNextPos("sequential");
+        if (p !== null) {
+          setPendingNextPos(p);
+        } else {
+          setPendingNextPos("sequential");
+        }
 
         setShowCodeOverlay(false);
       } catch (e) {

@@ -2,17 +2,15 @@
 export function resolveTargetToPos(indexMap, scriptLines, target) {
   if (target === undefined || target === null) return null;
   const map = indexMap?.current ?? new Map();
-  if (Number.isInteger(Number(target)) && scriptLines) {
-    const nt = Number(target);
-    if (nt >= 0 && nt < scriptLines.length) return nt;
-  }
-
   const tnum = Number(target);
   if (!Number.isNaN(tnum)) {
+    // 우선 map(스크립트의 index -> 배열 위치)을 검사해서 node.index 형태를 처리
     if (map.has(tnum)) return map.get(tnum);
-    const block = Math.floor(tnum / 100);
-    for (const [index, p] of map.entries()) {
-      if (Math.floor(Number(index) / 100) === block) return p;
+
+    // map에 없으면 숫자를 배열 인덱스로 간주할 수 있는지 확인
+    if (scriptLines && Number.isInteger(tnum)) {
+      const nt = Number(tnum);
+      if (nt >= 0 && nt < scriptLines.length) return nt;
     }
   }
 
