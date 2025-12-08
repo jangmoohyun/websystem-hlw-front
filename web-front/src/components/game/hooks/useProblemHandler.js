@@ -38,15 +38,27 @@ export default function useProblemHandler({
       setDisplayed("");
       setIsAnimating(false);
 
-      const pid = currentNode.meta?.problemId ?? null; // 스크립트 내 문제 ID로 조회
-
+      // storyProblems 기반으로 현재 문제 매핑
       try {
         const arr = storyProblems || [];
         let found = null;
 
-        if (pid) {
-          const foundById = arr.find((p) => String(p.id) === String(pid));
-          found = foundById || null;
+        try {
+          const nodes = Array.isArray(scriptLines) ? scriptLines : [];
+          const countUpToPos = nodes
+            .slice(0, Number(pos) + 1)
+            .filter((n) => n && n.type === "problem").length;
+          const orderIndex = Math.max(0, countUpToPos - 1);
+          if (arr.length > 0) {
+            if (orderIndex < arr.length) {
+              found = arr[orderIndex];
+            } else {
+              found = arr[arr.length - 1];
+            }
+          }
+          // eslint-disable-next-line no-unused-vars
+        } catch (e) {
+          // ignore and leave found null
         }
 
         if (!found) {
@@ -105,7 +117,7 @@ export default function useProblemHandler({
         const payload = {
           nodeIndex: pos,
           choiceId: currentNode?.choiceId ?? null,
-          problemId: problemData?.id ?? currentNode?.problemId ?? null,
+          problemId: problemData?.id ?? null,
           sourceCode: normalizedSource,
           languageId: finalLangId,
         };
