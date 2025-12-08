@@ -1,7 +1,6 @@
 // src/components/user/UserPage.jsx
 import React, { useState, useEffect } from "react";
 import { apiCall } from "../../utils/api.js";
-import LoadOverlay from "../common/LoadOverlay.jsx";
 
 export default function UserPage({ onBack }) {
   const [loading, setLoading] = useState(true);
@@ -15,30 +14,48 @@ export default function UserPage({ onBack }) {
   const fetchUserPage = async () => {
     try {
       setLoading(true);
+      setError(null);
+      console.log("🔵 유저 페이지 데이터 요청 시작");
+      
       const response = await apiCall("/users/me/page", {
         method: "GET",
       });
 
+      console.log("🔵 API 응답 상태:", response.status, response.statusText);
+      
       if (!response.ok) {
-        throw new Error("유저 페이지 정보를 가져오는데 실패했습니다.");
+        const errorData = await response.json().catch(() => ({}));
+        console.error("🔴 API 에러 응답:", errorData);
+        throw new Error(errorData.message || `서버 오류 (${response.status})`);
       }
 
       const data = await response.json();
+      console.log("🔵 API 응답 데이터:", data);
+      
       if (data.success) {
         setUserData(data.data);
+        console.log("✅ 유저 데이터 설정 완료:", data.data);
       } else {
         throw new Error(data.message || "데이터를 불러오는데 실패했습니다.");
       }
     } catch (err) {
-      console.error("유저 페이지 로드 오류:", err);
-      setError(err.message);
+      console.error("❌ 유저 페이지 로드 오류:", err);
+      setError(err.message || "알 수 없는 오류가 발생했습니다.");
     } finally {
       setLoading(false);
+      console.log("🔵 로딩 완료");
     }
   };
 
   if (loading) {
-    return <LoadOverlay />;
+    return (
+      <div className="w-screen h-screen flex items-center justify-center bg-pink-100">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-pink-500 mx-auto mb-4"></div>
+          <p className="text-gray-600">로딩 중...</p>
+        </div>
+      </div>
+    );
   }
 
   if (error) {
