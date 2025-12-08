@@ -15,12 +15,25 @@ export default function useStoryLoader(storyId) {
       try {
         const backendUrl =
           "https://hlw-back-dev-alb-1292379324.ap-northeast-2.elb.amazonaws.com";
+        console.log("[useStoryLoader] 요청 시작", {
+          storyId,
+          url: `${backendUrl}/stories/${storyId}`,
+        });
         setLoading(true);
         const res = await fetch(`${backendUrl}/stories/${storyId}`, {
           cache: "no-store",
         });
-        if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+        console.log("[useStoryLoader] 응답 상태", {
+          ok: res.ok,
+          status: res.status,
+          statusText: res.statusText,
+        });
+        if (!res.ok)
+          throw new Error(
+            `[useStoryLoader] HTTP ${res.status} ${res.statusText}`
+          );
         const json = await res.json();
+        console.log("[useStoryLoader] 응답 JSON", json);
 
         let lines = json?.data?.script?.line ?? json?.script ?? null;
         if (!lines) {
@@ -78,6 +91,7 @@ export default function useStoryLoader(storyId) {
         setHeroineCount(found.size);
         setScriptLines(normalized);
       } catch (err) {
+        console.error("[useStoryLoader] 오류 발생", err);
         if (!mounted) return;
         setError(err);
         setScriptLines([]);
