@@ -13,8 +13,13 @@ export default function useStoryLoader(storyId) {
     let mounted = true;
     const fetchStory = async () => {
       try {
+        const backendUrl =
+          import.meta.env.VITE_BACKEND_URL ||
+          "http://hlw-back-dev-alb-1292379324.ap-northeast-2.elb.amazonaws.com";
         setLoading(true);
-        const res = await fetch(`/stories/${storyId}`, { cache: "no-store" });
+        const res = await fetch(`${backendUrl}/stories/${storyId}`, {
+          cache: "no-store",
+        });
         if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
         const json = await res.json();
 
