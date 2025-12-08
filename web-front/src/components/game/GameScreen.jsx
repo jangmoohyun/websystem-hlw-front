@@ -76,6 +76,7 @@ export default function GameScreen({ onGoHome, onSetting, initialSave }) {
   // 스토리 메타 데이터(히로인/문제) & 히로인 등장 여부 ----------------------
   const [storyHeroines, setStoryHeroines] = useState([]);
   const [storyProblems, setStoryProblems] = useState([]);
+  const [storyBackground, setStoryBackground] = useState(null);
   const [hasHeroineAppeared, setHasHeroineAppeared] = useState(false);
   // 일러스트 모드 상태: 스크립트 노드(type : illust)일 때
   const [illustrationActive, setIllustrationActive] = useState(false);
@@ -215,6 +216,7 @@ export default function GameScreen({ onGoHome, onSetting, initialSave }) {
         if (cancelled) return;
         setStoryHeroines(json.data?.heroines ?? []);
         setStoryProblems(json.data?.problems ?? []);
+        setStoryBackground(json.data?.image ?? null);
         // eslint-disable-next-line no-unused-vars
       } catch (e) {
         if (!cancelled) {
@@ -328,7 +330,7 @@ export default function GameScreen({ onGoHome, onSetting, initialSave }) {
       setHasHeroineAppeared(true);
       return;
     }
-  }, [currentNode, storyHeroines]);
+  }, [currentNode, goToNextSequential, storyHeroines]);
 
   // choice/problem 진입 처리는 훅(`useChoiceHandler`, `useProblemHandler`)으로 분리되었습니다.
 
@@ -539,8 +541,10 @@ export default function GameScreen({ onGoHome, onSetting, initialSave }) {
       };
     }
 
+    const bgPath = storyBackground ?? "background/class.png";
+
     return {
-      backgroundImage: "url('background/class.png')",
+      backgroundImage: `url('${bgPath}')`,
       backgroundSize: "cover",
       backgroundPosition: "center",
     };
