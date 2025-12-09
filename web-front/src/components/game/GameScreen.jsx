@@ -22,6 +22,7 @@ import useTyping from "./hooks/useTyping";
 import useChoiceHandler from "./hooks/useChoiceHandler";
 import useProblemHandler from "./hooks/useProblemHandler";
 import { computeVisibleHeroines } from "./utils/helpers";
+import { apiCall } from "../../utils/api.js";
 
 //히로인 별 이미지 매핑  - 나중에 DB로 빼야함.
 const HEROINE_IMAGE_MAP = {
@@ -37,7 +38,7 @@ const FALLBACK_HEROINE_ORDER = ["이시현", "유자빈", "파인선"];
 
 export default function GameScreen({ onGoHome, onSetting, initialSave }) {
   // 현재 플레이 중인 스토리 ID
-  const [storyId, setStoryId] = useState(initialSave?.storyId ?? 1); //시작은 1
+  const [storyId, setStoryId] = useState(initialSave?.storyId ?? 12); //시작은 1
 
   const { saveGame } = useSaveManager();
 
@@ -82,9 +83,14 @@ export default function GameScreen({ onGoHome, onSetting, initialSave }) {
   const [illustrationActive, setIllustrationActive] = useState(false);
   const [illustrationImage, setIllustrationImage] = useState(null);
   const illustrationTimerRef = useRef(null);
+  const endTimerRef = useRef(null);
+  const lastEndRef = useRef(null);
+  const endFadeRef = useRef(null);
   // load
   const [pendingLoad, setPendingLoad] = useState(null);
   const [activeCondition, setActiveCondition] = useState(null);
+  const [endMode, setEndMode] = useState(false);
+  const [endOverlayOpacity, setEndOverlayOpacity] = useState(0);
 
   // 히로인 수: DB값 우선, 없으면 스크립트 추정값
   const effectiveHeroineCount = useMemo(() => {
@@ -313,6 +319,79 @@ export default function GameScreen({ onGoHome, onSetting, initialSave }) {
       return; // 일러스트 노드의 경우 아래 기존 로직을 무시
     }
 
+    // End 노드 처리: 끝 화면 표시 후 5초 뒤 홈으로 이동
+    if (nodeType === "end") {
+      try {
+        // prevent double-trigger for same node
+        if (lastEndRef.current !== true) {
+          lastEndRef.current = true;
+          setEndMode(true);
+          // use code-based overlay instead of image
+          setStoryBackground(null);
+          setEndOverlayOpacity(0);
+
+          // hide heroine, dialogue, menus and overlays
+          setHasHeroineAppeared(false);
+          setShowChoices(false);
+          setShowCodeOverlay(false);
+          setShowSaveMenu(false);
+          setShowLoadOverlay(false);
+          setResultData(null);
+
+          if (endTimerRef.current) {
+            clearTimeout(endTimerRef.current);
+            endTimerRef.current = null;
+          }
+
+          // fade-in the overlay shortly after activating end mode
+          if (endFadeRef.current) clearTimeout(endFadeRef.current);
+          endFadeRef.current = setTimeout(() => setEndOverlayOpacity(1), 50);
+
+          endTimerRef.current = setTimeout(() => {
+            try {
+              onGoHome && onGoHome();
+              // eslint-disable-next-line no-unused-vars
+            } catch (e) {
+              /* ignore */
+            }
+          }, 5000);
+        }
+      } catch (e) {
+        console.error("[GameScreen] End 처리 중 오류", e);
+      }
+
+      return;
+    }
+
+    // ending 노드 처리: 백엔드로 호감도 기반 이동 요청
+    if (nodeType === "ending") {
+      (async () => {
+        try {
+          const res = await apiCall(`/progress/jump-affinity`, {
+            method: "POST",
+          });
+
+          if (!res.ok) {
+            console.error("[GameScreen] jump-affinity API 실패", res.status);
+            return;
+          }
+
+          const data = await res.json().catch(() => ({}));
+          if (data && data.success && data.data && data.data.storyId) {
+            console.log("[GameScreen] jump-affinity 이동", data.data.storyId);
+            setStoryId(data.data.storyId);
+            setPos(0);
+          } else {
+            console.warn("[GameScreen] jump-affinity: 유효한 응답 아님", data);
+          }
+        } catch (e) {
+          console.error("[GameScreen] jump-affinity 호출 오류", e);
+        }
+      })();
+
+      return;
+    }
+
     // storyEnd 노드 처리: 다음 스토리로 이동
     if (nodeType === "storyend") {
       const nextCode =
@@ -426,6 +505,14 @@ export default function GameScreen({ onGoHome, onSetting, initialSave }) {
         clearTimeout(illustrationTimerRef.current);
         illustrationTimerRef.current = null;
       }
+      if (endTimerRef.current) {
+        clearTimeout(endTimerRef.current);
+        endTimerRef.current = null;
+      }
+      if (endFadeRef.current) {
+        clearTimeout(endFadeRef.current);
+        endFadeRef.current = null;
+      }
     };
   }, []);
 
@@ -491,6 +578,7 @@ export default function GameScreen({ onGoHome, onSetting, initialSave }) {
   //히로인 렌더링 -----------------------------------------------
 
   const renderHeroines = () => {
+    if (endMode) return null;
     // 일러스트가 활성화되어 있으면 히로인 그림은 숨깁니다.
     if (illustrationActive) return null;
     if (!hasHeroineAppeared) return null;
@@ -568,28 +656,51 @@ export default function GameScreen({ onGoHome, onSetting, initialSave }) {
         className="relative w-full h-full bg-cover bg-center"
         style={backgroundStyle}
       >
+        {/* End overlay (code-based) */}
+        {endMode && (
+          <div
+            className="absolute inset-0 z-50 flex items-center justify-center"
+            style={{
+              background:
+                "linear-gradient(180deg, rgba(0,0,0,0.6), rgba(0,0,0,0.85))",
+              transition: "opacity 1800ms ease",
+              opacity: endOverlayOpacity,
+            }}
+          >
+            <div className="text-center text-white">
+              <div className="text-6xl font-extrabold mb-4">The End..</div>
+              <div className="text-lg opacity-80">
+                5초 후 메인 화면으로 이동합니다
+              </div>
+            </div>
+          </div>
+        )}
         {/* 메뉴 */}
-        <Menu
-          onSave={() => setShowSaveMenu(true)}
-          onLoad={() => setShowSaveMenu(true)}
-          onGoHome={onGoHome}
-          onSetting={onSetting}
-        />
+        {!endMode && (
+          <Menu
+            onSave={() => setShowSaveMenu(true)}
+            onLoad={() => setShowSaveMenu(true)}
+            onGoHome={onGoHome}
+            onSetting={onSetting}
+          />
+        )}
 
         {/* 히로인 렌더링 (일러스트는 배경으로 처리되므로 항상 renderHeroines 호출) */}
         {renderHeroines()}
 
         {/* 대화 박스 */}
-        <DialogueBox
-          speaker={currentNode?.speaker}
-          text={displayed}
-          isAnimating={isAnimating}
-          onAdvance={handleAdvance}
-          onSkip={() => {
-            setDisplayed(currentNode?.text ?? "");
-            setIsAnimating(false);
-          }}
-        />
+        {!endMode && (
+          <DialogueBox
+            speaker={currentNode?.speaker}
+            text={displayed}
+            isAnimating={isAnimating}
+            onAdvance={handleAdvance}
+            onSkip={() => {
+              setDisplayed(currentNode?.text ?? "");
+              setIsAnimating(false);
+            }}
+          />
+        )}
 
         {/* 선택지 */}
         {showChoices && (
