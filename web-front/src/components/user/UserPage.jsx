@@ -144,15 +144,6 @@ export default function UserPage({ onBack }) {
                       라인 {progress.lineIndex}
                     </span>
                   </div>
-                  {progress.story && progress.story.image && (
-                    <div className="mt-2">
-                      <img
-                        src={progress.story.image}
-                        alt={progress.story.title}
-                        className="w-full h-32 object-cover rounded"
-                      />
-                    </div>
-                  )}
                   <p className="text-xs text-gray-400 mt-2">
                     마지막 업데이트:{" "}
                     {new Date(progress.updatedAt).toLocaleString("ko-KR")}
