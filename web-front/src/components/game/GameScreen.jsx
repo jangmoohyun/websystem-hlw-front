@@ -38,7 +38,7 @@ const FALLBACK_HEROINE_ORDER = ["이시현", "유자빈", "파인선"];
 
 export default function GameScreen({ onGoHome, onSetting, initialSave }) {
   // 현재 플레이 중인 스토리 ID
-  const [storyId, setStoryId] = useState(initialSave?.storyId ?? 12); //시작은 1
+  const [storyId, setStoryId] = useState(initialSave?.storyId ?? 1); //시작은 1
 
   const { saveGame } = useSaveManager();
 
