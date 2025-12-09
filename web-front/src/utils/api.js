@@ -1,6 +1,6 @@
 // src/utils/api.js
-const backendUrl = import.meta.env.VITE_BACKEND_URL || "http://hlw-back-dev-alb-1292379324.ap-northeast-2.elb.amazonaws.com";
-
+// CloudFront를 프록시로 사용하므로, 동일 Origin 상대경로로 호출한다.
+// (배포 환경: https://<cloudfront-domain>/users/..., /progress/... 등)
 // 토큰 저장/조회
 export const getAccessToken = () => {
   return localStorage.getItem("accessToken");
@@ -37,7 +37,7 @@ export const refreshAccessToken = async () => {
         throw new Error("리프레시 토큰이 없습니다.");
       }
 
-      const response = await fetch(`${backendUrl}/users/refresh`, {
+      const response = await fetch(`/users/refresh`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -82,7 +82,8 @@ export const apiCall = async (url, options = {}) => {
   }
 
   try {
-    let response = await fetch(`${backendUrl}${url}`, {
+    // url은 항상 "/users/...", "/progress/..." 형태의 절대 경로를 기대한다.
+    let response = await fetch(url, {
       ...options,
       headers,
     });
@@ -93,7 +94,7 @@ export const apiCall = async (url, options = {}) => {
         const newAccessToken = await refreshAccessToken();
         // 새 토큰으로 재시도
         headers.Authorization = `Bearer ${newAccessToken}`;
-        response = await fetch(`${backendUrl}${url}`, {
+        response = await fetch(url, {
           ...options,
           headers,
         });

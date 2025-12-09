@@ -209,8 +209,19 @@ export default function GameScreen({ onGoHome, onSetting, initialSave }) {
 
     const fetchStoryMeta = async () => {
       try {
-        const res = await fetch(`/stories/${storyId}`); //스토리 메타정보 요청
+        const url = `/stories/${storyId}`;
+        console.log("[GameScreen] 스토리 메타 요청 시작", {
+          storyId,
+          url,
+        });
+        const res = await fetch(url); //스토리 메타정보 요청
+        console.log("[GameScreen] 스토리 메타 응답 상태", {
+          ok: res.ok,
+          status: res.status,
+          statusText: res.statusText,
+        });
         const json = await res.json();
+        console.log("[GameScreen] 스토리 메타 JSON", json);
         if (!json.success) throw new Error(json.error || "fetch failed");
 
         if (cancelled) return;
@@ -219,6 +230,7 @@ export default function GameScreen({ onGoHome, onSetting, initialSave }) {
         setStoryBackground(json.data?.image ?? null);
         // eslint-disable-next-line no-unused-vars
       } catch (e) {
+        console.error("[GameScreen] 스토리 메타 로드 오류", e);
         if (!cancelled) {
           setStoryHeroines([]);
           setStoryProblems([]);
